@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080c13">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kartenalbum">
+  <title>Pokémon Kartenalbum</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css?v=4">
+</head>
+<body>
+  <div class="app-bg" aria-hidden="true"></div>
+
+  <header class="hero">
+    <div class="hero-top">
+      <div class="hero-title">
+        <div class="eyebrow">Karmesin &amp; Purpur</div>
+        <h1>Mein Kartenalbum</h1>
+        <p>Schwarze Blitze &amp; Weiße Flammen</p>
+      </div>
+      <div class="header-actions">
+        <button id="setsShortcut" class="header-action" type="button" aria-label="Zu den Editionen">
+          <span class="icon-stack" aria-hidden="true"></span>
+          <span>Sets</span>
+        </button>
+        <button id="statsButton" class="header-action" type="button" aria-label="Einstellungen und Sammlungsstand">
+          <span class="icon-gear" aria-hidden="true"></span>
+          <span>Details</span>
+        </button>
+      </div>
+    </div>
+
+    <button id="progressHero" class="progress-card hero-progress" type="button" aria-label="Sammlungsfortschritt anzeigen">
+      <div class="progress-ring" id="progressRing">
+        <div class="progress-ring-center"><strong id="progressPercent">0%</strong></div>
+      </div>
+      <div class="progress-summary">
+        <strong><span id="ownedCount">0</span> von <span id="totalCount">0</span> Karten<br>gesammelt</strong>
+        <span id="progressMessage">Viel Spaß beim Sammeln!</span>
+      </div>
+      <div class="progress-divider"></div>
+      <div class="set-progress-list">
+        <div><span class="set-dot black"></span><span>Schwarze Blitze</span><strong id="blackProgress">0 / 0</strong></div>
+        <div><span class="set-dot white"></span><span>Weiße Flammen</span><strong id="whiteProgress">0 / 0</strong></div>
+      </div>
+    </button>
+
+    <label class="search-wrap">
+      <span class="search-glyph" aria-hidden="true"></span>
+      <span class="sr-only">Karten durchsuchen</span>
+      <input id="searchInput" type="search" inputmode="search" autocomplete="off" placeholder="Pokémon, Nummer oder Seltenheit suchen…">
+      <button id="clearSearch" class="clear-search" type="button" aria-label="Suche löschen">×</button>
+    </label>
+
+    <div id="setFilter" class="set-switch" aria-label="Edition wählen">
+      <button type="button" data-set="all" class="active"><span class="filter-icon all-icon" aria-hidden="true"></span><span>Beide</span></button>
+      <button type="button" data-set="black"><span class="filter-icon bolt-icon" aria-hidden="true"></span><span>Schwarze Blitze</span></button>
+      <button type="button" data-set="white"><span class="filter-icon flame-icon" aria-hidden="true"></span><span>Weiße Flammen</span></button>
+    </div>
+  </header>
+
+  <main>
+    <section id="statusPanel" class="status-panel" aria-live="polite">
+      <div class="status-emblem" aria-hidden="true"><span></span></div>
+      <div class="status-copy">
+        <strong>Kartenalbum wird vorbereitet</strong>
+        <p id="statusText">Beim ersten Start werden die beiden Editionen einmal geladen.</p>
+      </div>
+      <div class="loader" aria-hidden="true"></div>
+    </section>
+
+    <section class="collection-bar" aria-label="Besitzfilter">
+      <div id="ownershipFilter" class="collection-tabs">
+        <button type="button" data-owned="all" class="active"><span class="tab-grid" aria-hidden="true"></span>Alle <span id="allTabCount">0</span></button>
+        <button type="button" data-owned="owned"><span class="tab-check" aria-hidden="true"></span>Gesammelt <span id="ownedTabCount">0</span></button>
+        <button type="button" data-owned="missing"><span class="tab-missing" aria-hidden="true"></span>Fehlen <span id="missingTabCount">0</span></button>
+      </div>
+      <div id="resultCount" class="result-count"></div>
+    </section>
+
+    <section id="galleryView" class="view active" aria-label="Kartenalbum">
+      <div id="gallery" class="gallery"></div>
+      <div id="emptyGallery" class="empty-state" hidden>
+        <div class="empty-binder" aria-hidden="true"><span></span><span></span></div>
+        <strong>Keine Karten passen zu deiner Auswahl.</strong>
+        <p>Versuche einen anderen Filter oder eine andere Suche.</p>
+      </div>
+    </section>
+
+    <section id="checklistView" class="view" aria-label="Checkliste">
+      <div class="checklist-intro">
+        <div class="eyebrow">Sammlung prüfen</div>
+        <h2>Checkliste</h2>
+        <p>Nach den echten Kartennummern der jeweiligen Edition sortiert. Antippen bedeutet: Diese Karte ist in der Sammlung.</p>
+      </div>
+      <div id="checklist" class="checklist-groups"></div>
+      <div id="emptyChecklist" class="empty-state" hidden>
+        <strong>Keine Karten passen zu deiner Auswahl.</strong>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Ansicht wählen">
+    <button type="button" class="active" data-view="galleryView"><span class="nav-grid" aria-hidden="true"></span><span>Album</span></button>
+    <button type="button" data-view="checklistView"><span class="nav-list" aria-hidden="true"></span><span>Checkliste</span></button>
+  </nav>
+
+  <dialog id="cardDialog" class="card-dialog">
+    <div class="dialog-shell">
+      <div class="dialog-topbar">
+        <button id="closeDialog" class="circle-control" type="button" aria-label="Schließen">×</button>
+        <button id="detailOwnedButton" class="detail-status" type="button" aria-pressed="false"><span class="status-check" aria-hidden="true"></span><span id="detailOwnedText">Fehlt</span></button>
+      </div>
+      <div class="detail-stage">
+        <div id="detailImageWrap" class="detail-image-wrap"><img id="detailImage" alt="" draggable="false"></div>
+        <div class="zoom-hint">Doppeltippen zum Vergrößern</div>
+      </div>
+      <div class="detail-content">
+        <div id="detailSet" class="eyebrow"></div>
+        <h2 id="detailName"></h2>
+        <p id="detailNumber" class="detail-number"></p>
+        <div id="detailMeta" class="meta-grid"></div>
+        <div id="detailDescription" class="description"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="statsDialog" class="stats-dialog">
+    <div class="stats-shell">
+      <button id="closeStats" class="circle-control stats-close" type="button" aria-label="Schließen">×</button>
+      <div class="eyebrow">Mein Kartenalbum</div>
+      <h2>Sammlungsstand</h2>
+      <div id="statsContent"></div>
+      <div class="backup-box">
+        <h3>Speicher &amp; Offline</h3>
+        <p id="storageStatus">Sammlungsstand wird lokal gespeichert.</p>
+        <p id="offlineStatus">Offline-Status wird geprüft …</p>
+        <button id="offlineButton" class="secondary-button wide" type="button">Album für offline speichern</button>
+        <h3 class="backup-subtitle">Sicherung</h3>
+        <p>Mit einer Sicherung kannst du den Besitzstand zusätzlich als Datei aufbewahren oder auf ein anderes Gerät übertragen.</p>
+        <button id="exportButton" class="secondary-button wide" type="button">Sammlung exportieren</button>
+        <label class="secondary-button wide import-label">Sammlung importieren<input id="importInput" type="file" accept="application/json"></label>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js?v=4" defer></script>
+</body>
+</html>

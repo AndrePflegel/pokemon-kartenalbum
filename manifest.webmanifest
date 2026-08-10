@@ -1,0 +1,13 @@
+{
+  "name": "Kartenalbum – Schwarze Blitze & Weiße Flammen",
+  "short_name": "Kartenalbum",
+  "description": "Sammlungsalbum für Pokémon Karmesin & Purpur – Schwarze Blitze und Weiße Flammen",
+  "start_url": "./",
+  "display": "standalone",
+  "scope": "./",
+  "background_color": "#0c0e12",
+  "theme_color": "#101217",
+  "icons": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
