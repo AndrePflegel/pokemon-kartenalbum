@@ -124,3 +124,38 @@ dialog{border:0;padding:0;color:var(--text);background:#0a0f16}dialog::backdrop{
 @media(max-width:430px){.collection-choice{grid-template-columns:66px minmax(0,1fr) 16px}.collection-logo{height:49px}.sets-shell{padding:14px}}
 
 .bottom-nav.no-extras{grid-template-columns:repeat(3,1fr)}
+
+/* V11: ruhigeres, speicherschonendes schnelles Scrollen */
+.card-tile{
+  content-visibility:auto;
+  contain:layout paint style;
+  contain-intrinsic-size:280px 390px;
+}
+.card-image-shell{
+  contain:paint;
+  transform:translateZ(0);
+}
+.card-image-shell img{
+  width:100%;
+  height:auto;
+  aspect-ratio:2.5/3.5;
+  object-fit:contain;
+}
+.gallery-sentinel{
+  grid-column:1/-1;
+  min-height:72px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  color:var(--muted);
+  font-size:10px;
+  content-visibility:auto;
+}
+.gallery-sentinel span{
+  width:16px;height:16px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.14);
+  border-top-color:rgba(255,255,255,.72);
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}

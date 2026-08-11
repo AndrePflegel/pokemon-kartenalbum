@@ -69,3 +69,14 @@ Die App ist jetzt ein allgemeines Pokémon-Kartenalbum:
 - Karten und Bilder werden weiterhin erst für die gewählte Kollektion geladen.
 - Offline-Speicherung gilt jeweils für die aktuell geöffnete Kollektion.
 - Neue Sets können im Katalog erscheinen, ohne dass die App für jedes Set neu programmiert werden muss.
+
+
+## Version 11
+
+Performance-Update für iPhone/iPad:
+- Album rendert zunächst nur 48 Karten.
+- Weitere Karten werden beim Scrollen in kleinen Blöcken nachgeladen.
+- `content-visibility` und Layout-Containment reduzieren Safari-Arbeitsspeicher und Layoutlast.
+- Kartenbilder bleiben `lazy`, werden asynchron dekodiert und mit niedriger Ladepriorität behandelt.
+- Schnelles Scrollen durch große Sets soll dadurch deutlich stabiler bleiben.
+- Besitzstand, Offline-Daten und Set-Auswahl bleiben erhalten.

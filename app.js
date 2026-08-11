@@ -38,11 +38,13 @@ const CARD_VARIANTS = [
 const STORAGE_KEY = 'pokemon-black-white-owned-v1';
 const DETAIL_CACHE_KEY = 'pokemon-black-white-detail-cache-v1';
 const LEGACY_ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v9';
-const DB_NAME = 'pokemon-kartenalbum-v10';
+const DB_NAME = 'pokemon-kartenalbum-v11';
 const DB_VERSION = 1;
 const OWNED_STORE = 'owned';
-const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v10';
+const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v11';
 const REQUEST_TIMEOUT_MS = 15000;
+const GALLERY_INITIAL_BATCH = 48;
+const GALLERY_NEXT_BATCH = 32;
 
 const state = {
   cards: [],
@@ -57,6 +59,9 @@ const state = {
   marketOwnershipFilter: 'all',
   search: '',
   activeCardId: null,
+  galleryRenderLimit: GALLERY_INITIAL_BATCH,
+  galleryQueryKey: '',
+  galleryObserver: null,
 };
 
 const ids = [
@@ -145,7 +150,7 @@ function writeJSON(key, value) {
 }
 
 function collectionCacheKey(collection = state.collection) {
-  return `pokemon-album-cache-v10:${collection.id}`;
+  return `pokemon-album-cache-v11:${collection.id}`;
 }
 function activeExtras() { return state.collection?.special ? EXTRA_CARDS : []; }
 function activeVariants() { return state.collection?.special ? CARD_VARIANTS : []; }
@@ -400,15 +405,48 @@ function renderCounts() {
   el.missingTabCount.textContent = counts.missing;
 }
 
-function renderGallery() {
+function galleryQueryKey(cards) {
+  return `${state.collection?.id || ''}|${state.setFilter}|${state.ownershipFilter}|${state.search}|${cards.length}`;
+}
+function disconnectGalleryObserver() {
+  if (state.galleryObserver) {
+    state.galleryObserver.disconnect();
+    state.galleryObserver = null;
+  }
+}
+function observeGallerySentinel() {
+  disconnectGalleryObserver();
+  const sentinel = document.getElementById('gallerySentinel');
+  if (!sentinel || !('IntersectionObserver' in window)) return;
+  state.galleryObserver = new IntersectionObserver(entries => {
+    if (!entries.some(entry => entry.isIntersecting)) return;
+    const cards = filteredCards();
+    if (state.galleryRenderLimit >= cards.length) {
+      disconnectGalleryObserver();
+      return;
+    }
+    state.galleryRenderLimit = Math.min(cards.length, state.galleryRenderLimit + GALLERY_NEXT_BATCH);
+    renderGallery(true);
+  }, { root: null, rootMargin: '900px 0px', threshold: 0.01 });
+  state.galleryObserver.observe(sentinel);
+}
+function renderGallery(preserveLimit = false) {
   const cards = filteredCards();
+  const key = galleryQueryKey(cards);
+  if (!preserveLimit && key !== state.galleryQueryKey) {
+    state.galleryRenderLimit = GALLERY_INITIAL_BATCH;
+    state.galleryQueryKey = key;
+  }
   el.emptyGallery.hidden = cards.length > 0;
-  el.resultCount.textContent = cards.length ? `${cards.length} Karten` : '';
-  el.gallery.innerHTML = cards.map(card => {
+  const shown = Math.min(cards.length, state.galleryRenderLimit);
+  el.resultCount.textContent = cards.length ? (shown < cards.length ? `${shown} von ${cards.length} Karten` : `${cards.length} Karten`) : '';
+
+  const visibleCards = cards.slice(0, shown);
+  el.gallery.innerHTML = visibleCards.map(card => {
     const owned = state.owned.has(card.id);
-    return `<article class="card-tile ${owned ? 'owned' : ''}">
+    return `<article class="card-tile ${owned ? 'owned' : ''}" data-gallery-card="${attr(card.id)}">
       <button class="card-open" type="button" data-card-id="${attr(card.id)}" aria-label="${attr(card.name)} ansehen">
-        <span class="card-image-shell"><img loading="lazy" decoding="async" src="${attr(imageUrl(card.image, 'low'))}" alt="${attr(card.name)}"></span>
+        <span class="card-image-shell"><img loading="lazy" decoding="async" fetchpriority="low" src="${attr(imageUrl(card.image, 'low'))}" alt="${attr(card.name)}"></span>
         <span class="card-caption">
           <span class="card-title">${escapeHTML(card.name)}</span>
           <span class="card-meta"><span><i class="set-dot ${card.setKind}"></i>${escapeHTML(localNumber(card))}${card.setOfficialCount ? '/' + String(card.setOfficialCount).padStart(3,'0') : ''}</span><span>${escapeHTML(card.rarity || '')}</span></span>
@@ -416,9 +454,14 @@ function renderGallery() {
       </button>
       <button class="card-status" type="button" data-toggle-owned="${attr(card.id)}" aria-pressed="${owned}" aria-label="${owned ? 'Als fehlend markieren' : 'Als gesammelt markieren'}"><span class="mini-check"></span><span>${owned ? 'Da' : 'Fehlt'}</span></button>
     </article>`;
-  }).join('');
-}
+  }).join('') + (shown < cards.length ? `<div id="gallerySentinel" class="gallery-sentinel" aria-hidden="true"><span></span><small>Weitere Karten werden geladen …</small></div>` : '');
 
+  if (shown < cards.length) {
+    requestAnimationFrame(observeGallerySentinel);
+  } else {
+    disconnectGalleryObserver();
+  }
+}
 function renderChecklist() {
   const cards = filteredCards();
   el.emptyChecklist.hidden = cards.length > 0;
@@ -440,7 +483,12 @@ function toggleOwned(id, force) {
   const next = force ?? !state.owned.has(id);
   if (next) state.owned.add(id); else state.owned.delete(id);
   writeOwned(id, next);
-  renderAll();
+  renderCounts();
+  renderGallery(true);
+  renderChecklist();
+  renderExtras();
+  renderFindCards();
+  renderStats();
   if (state.activeCardId === id && el.cardDialog.open) { updateDetailOwnedButton(); renderDetailMarket(marketDescriptorForActive()); }
 }
 
@@ -823,6 +871,9 @@ async function switchCollection(collection) {
   state.setFilter = 'all';
   state.ownershipFilter = 'all';
   state.marketOwnershipFilter = 'all';
+  state.galleryRenderLimit = GALLERY_INITIAL_BATCH;
+  state.galleryQueryKey = '';
+  disconnectGalleryObserver();
   el.searchInput.value = '';
   el.setsDialog.close();
   switchView('galleryView');
