@@ -1,6 +1,6 @@
-const APP_CACHE = 'pokemon-kartenalbum-app-v4';
-const CONTENT_CACHE = 'pokemon-kartenalbum-content-v6';
-const APP_FILES = ['./','./index.html','./styles.css?v=4','./app.js?v=4','./manifest.webmanifest','./icon.svg','./apple-touch-icon.png','./icon-512.png'];
+const APP_CACHE = 'pokemon-kartenalbum-app-v7';
+const CONTENT_CACHE = 'pokemon-kartenalbum-content-v7';
+const APP_FILES = ['./','./index.html','./styles.css?v=7','./app.js?v=7','./manifest.webmanifest','./icon.svg','./apple-touch-icon.png','./icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(APP_CACHE).then(cache => cache.addAll(APP_FILES)).then(() => self.skipWaiting()));
@@ -48,5 +48,5 @@ self.addEventListener('fetch', event => {
     );
     return;
   }
-  if (url.hostname.includes('tcgdex.net')) event.respondWith(cacheFirst(event.request));
+  if (url.hostname.includes('tcgdex.net') || url.hostname.includes('limitlesstcg') || url.hostname.includes('deckshop.de') || url.hostname.includes('lotticards.de')) event.respondWith(cacheFirst(event.request));
 });

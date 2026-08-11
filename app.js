@@ -4,28 +4,35 @@ const SETS = [
   { id: 'sv10.5w', kind: 'white', label: 'Weiße Flammen' },
 ];
 const EXTRA_CARDS = [
-{id:'extra-svp-208',code:'SVP 208',name:'Victini',kind:'promo',group:'Schwarze Blitze',note:'Unova Victini Illustration Collection'},
-{id:'extra-svp-209',code:'SVP 209',name:'Voltolos',kind:'promo',group:'Schwarze Blitze',note:'Schwarze Blitze Elite-Trainer-Box'},
-{id:'extra-svp-210',code:'SVP 210',name:'Boreos',kind:'promo',group:'Weiße Flammen',note:'Weiße Flammen Elite-Trainer-Box'},
-{id:'extra-svp-211',code:'SVP 211',name:'Morbitesse',kind:'promo',group:'Weiße Flammen',note:'Weiße Flammen Tech-Sticker-Kollektion'},
-{id:'extra-svp-212',code:'SVP 212',name:'Zytomega',kind:'promo',group:'Schwarze Blitze',note:'Schwarze Blitze Tech-Sticker-Kollektion'},
-{id:'extra-sve-017',code:'SVE 017',name:'Basis-Pflanzen-Energie',kind:'energy',group:'Beide Editionen'},
-{id:'extra-sve-018',code:'SVE 018',name:'Basis-Feuer-Energie',kind:'energy',group:'Beide Editionen'},
-{id:'extra-sve-019',code:'SVE 019',name:'Basis-Wasser-Energie',kind:'energy',group:'Beide Editionen'},
-{id:'extra-sve-020',code:'SVE 020',name:'Basis-Elektro-Energie',kind:'energy',group:'Beide Editionen'},
-{id:'extra-sve-021',code:'SVE 021',name:'Basis-Psycho-Energie',kind:'energy',group:'Beide Editionen'},
-{id:'extra-sve-022',code:'SVE 022',name:'Basis-Kampf-Energie',kind:'energy',group:'Beide Editionen'},
-{id:'extra-sve-023',code:'SVE 023',name:'Basis-Finsternis-Energie',kind:'energy',group:'Beide Editionen'},
-{id:'extra-sve-024',code:'SVE 024',name:'Basis-Metall-Energie',kind:'energy',group:'Beide Editionen'}
+  {id:'extra-svp-208',apiId:'svp-208',code:'SVP 208',name:'Victini',kind:'promo',group:'Schwarze Blitze',note:'Unova Victini Illustration Collection',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVP/SVP_208_R_DE_LG.png','https://assets.tcgdex.net/de/sv/svp/208/high.webp','https://assets.tcgdex.net/en/sv/svp/208/high.webp']},
+  {id:'extra-svp-209',apiId:'svp-209',code:'SVP 209',name:'Voltolos',kind:'promo',group:'Schwarze Blitze',note:'Schwarze Blitze Elite-Trainer-Box',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVP/SVP_209_R_DE_LG.png','https://assets.tcgdex.net/de/sv/svp/209/high.webp','https://assets.tcgdex.net/en/sv/svp/209/high.webp']},
+  {id:'extra-svp-210',apiId:'svp-210',code:'SVP 210',name:'Boreos',kind:'promo',group:'Weiße Flammen',note:'Weiße Flammen Elite-Trainer-Box',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVP/SVP_210_R_DE_LG.png','https://www.lotticards.de/media/image/product/214651/lg/boreos-svp-de-210-promo.jpg','https://assets.tcgdex.net/de/sv/svp/210/high.webp']},
+  {id:'extra-svp-211',apiId:'svp-211',code:'SVP 211',name:'Morbitesse',kind:'promo',group:'Weiße Flammen',note:'Weiße Flammen Tech-Sticker-Kollektion',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVP/SVP_211_R_DE_LG.png','https://assets.tcgdex.net/de/sv/svp/211/high.webp','https://assets.tcgdex.net/en/sv/svp/211/high.webp']},
+  {id:'extra-svp-212',apiId:'svp-212',code:'SVP 212',name:'Zytomega',kind:'promo',group:'Schwarze Blitze',note:'Schwarze Blitze Tech-Sticker-Kollektion',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVP/SVP_212_R_DE_LG.png','https://assets.tcgdex.net/de/sv/svp/212/high.webp','https://assets.tcgdex.net/en/sv/svp/212/high.webp']},
+  {id:'extra-sve-017',code:'SVE 017',name:'Basis-Pflanzen-Energie',kind:'energy',group:'Beide Editionen',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_017_R_DE_LG.png','https://assets.tcgdex.net/de/sv/sve/017/high.webp','https://assets.tcgdex.net/en/sv/sve/017/high.webp']},
+  {id:'extra-sve-018',code:'SVE 018',name:'Basis-Feuer-Energie',kind:'energy',group:'Beide Editionen',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_018_R_DE_LG.png','https://assets.tcgdex.net/de/sv/sve/018/high.webp','https://assets.tcgdex.net/en/sv/sve/018/high.webp']},
+  {id:'extra-sve-019',code:'SVE 019',name:'Basis-Wasser-Energie',kind:'energy',group:'Beide Editionen',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_019_R_DE_LG.png','https://www.deckshop.de/cdn/shop/files/PXL_20250830_183746320_ae3cb080-9094-4674-8aa0-0a7743e21bb2.jpg?v=1757608074&width=1946','https://assets.tcgdex.net/de/sv/sve/019/high.webp']},
+  {id:'extra-sve-020',code:'SVE 020',name:'Basis-Elektro-Energie',kind:'energy',group:'Beide Editionen',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_020_R_DE_LG.png','https://assets.tcgdex.net/de/sv/sve/020/high.webp','https://assets.tcgdex.net/en/sv/sve/020/high.webp']},
+  {id:'extra-sve-021',code:'SVE 021',name:'Basis-Psycho-Energie',kind:'energy',group:'Beide Editionen',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_021_R_DE_LG.png','https://assets.tcgdex.net/de/sv/sve/021/high.webp','https://assets.tcgdex.net/en/sv/sve/021/high.webp']},
+  {id:'extra-sve-022',code:'SVE 022',name:'Basis-Kampf-Energie',kind:'energy',group:'Beide Editionen',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_022_R_DE_LG.png','https://assets.tcgdex.net/de/sv/sve/022/high.webp','https://assets.tcgdex.net/en/sv/sve/022/high.webp']},
+  {id:'extra-sve-023',code:'SVE 023',name:'Basis-Finsternis-Energie',kind:'energy',group:'Beide Editionen',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_023_R_DE_LG.png','https://assets.tcgdex.net/de/sv/sve/023/high.webp','https://assets.tcgdex.net/en/sv/sve/023/high.webp']},
+  {id:'extra-sve-024',code:'SVE 024',name:'Basis-Metall-Energie',kind:'energy',group:'Beide Editionen',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_024_R_DE_LG.png','https://assets.tcgdex.net/de/sv/sve/024/high.webp','https://assets.tcgdex.net/en/sv/sve/024/high.webp']}
+];
+
+const CARD_VARIANTS = [
+  {id:'variant-blk-001-poster',setKind:'black',localId:'001',name:'Serpifeu',label:'Poster Collection – Spezial-Holo',origin:'Unova Poster Collection',note:'Gleiche Kartennummer, besondere Holo-Ausführung aus dem deutschen Produkt.'},
+  {id:'variant-wht-011-poster',setKind:'white',localId:'011',name:'Floink',label:'Poster Collection – Spezial-Holo',origin:'Unova Poster Collection',note:'Gleiche Kartennummer, besondere Holo-Ausführung aus dem deutschen Produkt.'},
+  {id:'variant-wht-021-poster',setKind:'white',localId:'021',name:'Ottaro',label:'Poster Collection – Spezial-Holo',origin:'Unova Poster Collection',note:'Gleiche Kartennummer, besondere Holo-Ausführung aus dem deutschen Produkt.'},
+  {id:'variant-blk-012-pokeball',setKind:'black',localId:'012',name:'Victini',label:'Premium-Pokéball-Variante',origin:'Unova Victini Illustration Collection',note:'Produkt-exklusive Pokéball-Parallelkarte mit derselben Setnummer.'}
 ];
 
 const STORAGE_KEY = 'pokemon-black-white-owned-v1';
 const DETAIL_CACHE_KEY = 'pokemon-black-white-detail-cache-v1';
-const ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v6';
-const DB_NAME = 'pokemon-kartenalbum-v6';
+const ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v7';
+const DB_NAME = 'pokemon-kartenalbum-v7';
 const DB_VERSION = 1;
 const OWNED_STORE = 'owned';
-const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v6';
+const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v7';
 const REQUEST_TIMEOUT_MS = 15000;
 
 const state = {
@@ -44,7 +51,7 @@ const ids = [
   'statusPanel','statusText','gallery','emptyGallery','checklist','emptyChecklist','extrasCards','extrasSummary','findCards','emptyFind','searchInput','clearSearch',
   'ownedCount','totalCount','blackProgress','whiteProgress','progressRing','progressPercent','progressMessage','progressHero',
   'allTabCount','ownedTabCount','missingTabCount','resultCount','cardDialog','closeDialog','detailImage','detailImageWrap',
-  'detailSet','detailName','detailNumber','detailMeta','detailDescription','detailOwnedButton','detailOwnedText','statsButton',
+  'detailSet','detailName','detailNumber','detailMeta','detailDescription','detailVariants','detailOwnedButton','detailOwnedText','statsButton',
   'statsDialog','closeStats','statsContent','exportButton','importInput','setsShortcut','offlineButton','offlineStatus','storageStatus'
 ];
 const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
@@ -138,6 +145,23 @@ function imageUrl(base, quality = 'low') {
   if (/\.(webp|png|jpe?g)$/i.test(base)) return base;
   return `${base}/${quality}.webp`;
 }
+
+function imageFallbackAttr(urls) { return attr(JSON.stringify((urls || []).filter(Boolean))); }
+function applyImageFallback(img) {
+  let urls=[];
+  try { urls=JSON.parse(img.dataset.sources || '[]'); } catch {}
+  let index=Number(img.dataset.sourceIndex || 0)+1;
+  while(index < urls.length && !urls[index]) index++;
+  if(index < urls.length) { img.dataset.sourceIndex=String(index); img.src=urls[index]; return; }
+  img.onerror=null; img.closest('.extra-image-wrap,.variant-image-wrap')?.classList.add('image-missing');
+}
+function variantKey(card) { return `${card.setKind}:${localNumber(card)}`; }
+function variantsForCard(card) { return CARD_VARIANTS.filter(v => `${v.setKind}:${v.localId}` === variantKey(card)); }
+function variantImageSources(variant, card) {
+  const baseLow=imageUrl(card?.image,'low'), baseHigh=imageUrl(card?.image,'high');
+  return [baseHigh,baseLow].filter(Boolean);
+}
+
 function localNumber(card) { return String(card.localId ?? card.number ?? '').padStart(3, '0'); }
 function numberValue(card) {
   const n = parseInt(String(card.localId ?? card.number ?? '').replace(/\D/g, ''), 10);
@@ -338,11 +362,12 @@ async function openCard(id) {
   el.detailName.textContent = card.name;
   el.detailSet.textContent = setLabel(card.setKind);
   el.detailNumber.textContent = `${localNumber(card)}/${String(card.setOfficialCount || 86).padStart(3,'0')}`;
-  el.detailImage.src = imageUrl(card.image, 'high');
+  el.detailImage.onerror=null; el.detailImage.removeAttribute('data-sources'); el.detailImage.src = imageUrl(card.image, 'high');
   el.detailImage.alt = card.name;
   el.detailImageWrap.classList.remove('zoomed');
   el.detailMeta.innerHTML = '<div class="meta-item"><span>Status</span><strong>Details werden geladen …</strong></div>';
   el.detailDescription.innerHTML = '';
+  renderCardVariants(card);
   updateDetailOwnedButton();
   if (!el.cardDialog.open) el.cardDialog.showModal();
 
@@ -385,6 +410,10 @@ function renderCardDetail(detail) {
   el.detailDescription.innerHTML = parts.join('') || '<p>Für diese Karte liegen keine weiteren Beschreibungstexte vor.</p>';
 }
 
+function renderCardVariants(card) {
+  if(!el.detailVariants)return; const variants=variantsForCard(card); if(!variants.length){el.detailVariants.innerHTML='';return;}
+  el.detailVariants.innerHTML=`<details class="variant-details"><summary>Weitere deutsche Varianten <span>${variants.length}</span></summary><div class="variant-list">${variants.map(v=>{const have=state.owned.has(v.id),sources=variantImageSources(v,card),q=encodeURIComponent(`Pokémon ${v.name} ${v.localId}/086 ${v.label} deutsch`);return `<article class="variant-card"><div class="variant-image-wrap"><img src="${attr(sources[0]||'')}" data-sources='${imageFallbackAttr(sources)}' data-source-index="0" onerror="applyImageFallback(this)" alt="${attr(v.name+' '+v.label)}" loading="lazy"></div><div class="variant-copy"><strong>${escapeHTML(v.label)}</strong><span>${escapeHTML(v.origin)}</span><small>${escapeHTML(v.note)}</small><a href="https://www.ebay.de/sch/i.html?_nkw=${q}" target="_blank" rel="noopener">Angebote suchen</a></div><button type="button" class="variant-own ${have?'is-owned':''}" data-variant-owned="${attr(v.id)}">${have?'Da ✓':'Fehlt'}</button></article>`}).join('')}</div></details>`;
+} 
 function updateDetailOwnedButton() {
   const owned = state.owned.has(state.activeCardId);
   el.detailOwnedButton.setAttribute('aria-pressed', String(owned));
@@ -393,14 +422,36 @@ function updateDetailOwnedButton() {
 
 
 
-function extraImage(extra) { const n=extra.code.split(' ')[1]; const set=extra.kind==='promo'?'svp':'sve'; return `https://assets.tcgdex.net/de/sv/${set}/${n}/low.webp`; }
+function extraImageSources(extra) { return (extra.images || []).filter(Boolean); }
+async function openExtra(id) {
+  const extra=EXTRA_CARDS.find(x=>x.id===id); if(!extra)return;
+  state.activeCardId=id;
+  el.detailName.textContent=extra.name;
+  el.detailSet.textContent=extra.kind==='promo' ? 'Deutsche Promo' : 'Holo-Basisenergie';
+  el.detailNumber.textContent=extra.code;
+  const sources=extraImageSources(extra);
+  el.detailImage.dataset.sources=JSON.stringify(sources); el.detailImage.dataset.sourceIndex='0'; el.detailImage.onerror=()=>applyImageFallback(el.detailImage); el.detailImage.src=sources[0]||''; el.detailImage.alt=extra.name;
+  el.detailImageWrap.classList.remove('zoomed');
+  el.detailMeta.innerHTML=`<div class="meta-item"><span>Herkunft</span><strong>${escapeHTML(extra.note||extra.group)}</strong></div><div class="meta-item"><span>Kennung</span><strong>${escapeHTML(extra.code)}</strong></div>`;
+  el.detailDescription.innerHTML='<p>Kartendetails werden geladen …</p>';
+  el.detailVariants.innerHTML=''; updateDetailOwnedButton(); if(!el.cardDialog.open)el.cardDialog.showModal();
+  if(extra.apiId){
+    try{let detail=state.detailCache[extra.apiId]; if(!detail){const raw=await apiGet(`/cards/${encodeURIComponent(extra.apiId)}`); detail=raw?.data??raw; state.detailCache[extra.apiId]=detail; writeJSON(DETAIL_CACHE_KEY,state.detailCache);} if(state.activeCardId===id)renderExtraDetail(extra,detail);}catch(e){if(state.activeCardId===id)el.detailDescription.innerHTML=`<p>${escapeHTML(extra.note||'Deutsche Zusatzkarte zu Schwarze Blitze / Weiße Flammen.')}</p>`;}
+  } else el.detailDescription.innerHTML='<p>Spezielle Holo-Basisenergie aus den Produkten Schwarze Blitze & Weiße Flammen.</p>';
+}
+function renderExtraDetail(extra,detail){
+  const meta=[['Seltenheit',detail.rarity],['Kategorie',detail.category],['KP',detail.hp],['Typ',(detail.types||[]).join(', ')],['Illustration',detail.illustrator]].filter(([,v])=>v!=null&&String(v).trim());
+  meta.unshift(['Herkunft',extra.note||extra.group],['Kennung',extra.code]);
+  el.detailMeta.innerHTML=meta.map(([l,v])=>`<div class="meta-item"><span>${escapeHTML(l)}</span><strong>${escapeHTML(v)}</strong></div>`).join('');
+  const parts=[]; if(detail.description)parts.push(`<h3>Beschreibung</h3><p>${escapeHTML(detail.description)}</p>`); if(detail.abilities?.length){parts.push('<h3>Fähigkeiten</h3>');detail.abilities.forEach(a=>parts.push(`<div class="attack"><div class="attack-head"><span>${escapeHTML(a.name||'Fähigkeit')}</span></div><div class="attack-text">${escapeHTML(a.effect||'')}</div></div>`));} if(detail.attacks?.length){parts.push('<h3>Attacken</h3>');detail.attacks.forEach(a=>parts.push(`<div class="attack"><div class="attack-head"><span>${escapeHTML(a.name||'Attacke')}</span><span>${escapeHTML(a.damage??'')}</span></div><div class="attack-text">${escapeHTML(a.effect||'')}</div></div>`));}
+  el.detailDescription.innerHTML=parts.join('')||`<p>${escapeHTML(extra.note||'Deutsche Zusatzkarte zu Schwarze Blitze / Weiße Flammen.')}</p>`;
+}
 function renderExtras() {
  if(!el.extrasCards)return; const owned=EXTRA_CARDS.filter(x=>state.owned.has(x.id)).length;
- el.extrasSummary.innerHTML=`<strong>${owned} von ${EXTRA_CARDS.length}</strong><span>Extras gesammelt</span>`;
+ el.extrasSummary.innerHTML=`<strong>${owned} von ${EXTRA_CARDS.length}</strong><span>deutsche Extras gesammelt</span>`;
  const groups=[['Promos – Schwarze Blitze',EXTRA_CARDS.filter(x=>x.kind==='promo'&&x.group==='Schwarze Blitze')],['Promos – Weiße Flammen',EXTRA_CARDS.filter(x=>x.kind==='promo'&&x.group==='Weiße Flammen')],['Holo-Basisenergien – beide Editionen',EXTRA_CARDS.filter(x=>x.kind==='energy')]];
- el.extrasCards.innerHTML=groups.map(([title,cards])=>`<section class="extra-group"><h3>${escapeHTML(title)}</h3><div class="extra-grid">${cards.map(x=>{const have=state.owned.has(x.id),q=encodeURIComponent(`Pokémon ${x.name} ${x.code} deutsch`),cm=encodeURIComponent(`${x.name} ${x.code}`);return `<article class="extra-card ${have?'owned':''}"><div class="extra-image-wrap"><img src="${attr(extraImage(x))}" alt="${attr(x.name)}" loading="lazy" onerror="this.style.display='none'"><span>${escapeHTML(x.code)}</span></div><div class="extra-meta"><strong>${escapeHTML(x.name)}</strong><b>${escapeHTML(x.code)}</b>${x.note?`<small>${escapeHTML(x.note)}</small>`:''}</div><button class="extra-own ${have?'is-owned':''}" data-extra-owned="${attr(x.id)}">${have?'Da ✓':'Fehlt'}</button><div class="extra-market"><a href="https://www.ebay.de/sch/i.html?_nkw=${q}" target="_blank" rel="noopener">eBay</a><a href="https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${cm}" target="_blank" rel="noopener">Cardmarket</a></div></article>`}).join('')}</div></section>`).join('');
+ el.extrasCards.innerHTML=groups.map(([title,cards])=>`<section class="extra-group"><h3>${escapeHTML(title)}</h3><div class="extra-grid">${cards.map(x=>{const have=state.owned.has(x.id),q=encodeURIComponent(`Pokémon ${x.name} ${x.code} deutsch`),cm=encodeURIComponent(`${x.name} ${x.code}`),sources=extraImageSources(x);return `<article class="extra-card ${have?'owned':''}"><button class="extra-open" type="button" data-extra-open="${attr(x.id)}"><div class="extra-image-wrap"><img src="${attr(sources[0]||'')}" data-sources='${imageFallbackAttr(sources)}' data-source-index="0" alt="${attr(x.name)}" loading="lazy" onerror="applyImageFallback(this)"><span>${escapeHTML(x.code)}</span></div><div class="extra-meta"><strong>${escapeHTML(x.name)}</strong><b>${escapeHTML(x.code)}</b>${x.note?`<small>${escapeHTML(x.note)}</small>`:''}</div></button><button class="extra-own ${have?'is-owned':''}" data-extra-owned="${attr(x.id)}">${have?'Da ✓':'Fehlt'}</button><div class="extra-market"><a href="https://www.ebay.de/sch/i.html?_nkw=${q}" target="_blank" rel="noopener">eBay</a><a href="https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${cm}" target="_blank" rel="noopener">Cardmarket</a></div></article>`}).join('')}</div></section>`).join('');
 }
-
 function marketplaceQuery(card) {
   const edition = card.setKind === 'black' ? 'Schwarze Blitze' : 'Weiße Flammen';
   return `Pokémon ${card.name} ${localNumber(card)}/086 ${edition} deutsch`;
@@ -582,7 +633,7 @@ async function prepareOfflineAlbum() {
     const low = imageUrl(card.image, 'low');
     if (low) tasks.push({ type: 'image', url: low });
   });
-  EXTRA_CARDS.forEach(extra => tasks.push({ type: 'image', url: extraImage(extra) }));
+  EXTRA_CARDS.forEach(extra => extraImageSources(extra).slice(0,2).forEach(url => tasks.push({ type: 'image', url })));
   let done = 0;
   let failed = 0;
   const update = () => {
@@ -596,7 +647,7 @@ async function prepareOfflineAlbum() {
     done++;
     update();
   }, 6);
-  localStorage.setItem('pokemon-offline-ready-v6', JSON.stringify({ savedAt: Date.now(), failed, total: tasks.length }));
+  localStorage.setItem('pokemon-offline-ready-v7', JSON.stringify({ savedAt: Date.now(), failed, total: tasks.length }));
   el.offlineStatus.textContent = failed ? `Offline-Album gespeichert. ${failed} Dateien konnten nicht geladen werden; online werden sie später ergänzt.` : 'Offline bereit: Karten, Bilder und Beschreibungen sind auf diesem Gerät gespeichert.';
   el.offlineButton.textContent = 'Offline-Album aktualisieren';
   el.offlineButton.disabled = false;
@@ -604,7 +655,7 @@ async function prepareOfflineAlbum() {
 
 function updateOfflineStatus() {
   if (!el.offlineStatus) return;
-  const ready = readJSON('pokemon-offline-ready-v6', null);
+  const ready = readJSON('pokemon-offline-ready-v7', null);
   if (ready) {
     const date = new Date(ready.savedAt);
     el.offlineStatus.textContent = `Offline-Album vorhanden · zuletzt gespeichert ${date.toLocaleDateString('de-DE')}.`;
