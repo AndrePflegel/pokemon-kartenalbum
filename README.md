@@ -92,3 +92,16 @@ Cardmarket-Preise in der Marktansicht:
 - Der Preisstand und sein Alter werden sichtbar angezeigt; ab sieben Tagen wird der Status hervorgehoben.
 - Bereits geladene Preise bleiben lokal auf dem Gerät erhalten und funktionieren offline.
 - Datenquelle sind die offiziellen öffentlichen Cardmarket-Dateien `price_guide_6.json` und `products_singles_6.json`.
+
+
+## Version 13
+
+Die Preisversorgung läuft nicht mehr direkt vom iPhone zu Cardmarket.
+
+- GitHub Actions lädt einmal täglich das offizielle öffentliche Pokémon-Preisverzeichnis und den Produktkatalog von Cardmarket.
+- Daraus wird im Repository `data/pokemon-prices.json` erzeugt.
+- Das iPhone lädt ausschließlich diese kleine Datei von derselben GitHub-Pages-Seite.
+- Auf dem iPhone erfolgt weiterhin **kein automatischer Preisdownload**. Nur der Button `Preise laden / aktualisieren` startet den Download.
+- Die GitHub-Aktualisierung verursacht keinen Datenverkehr auf dem iPhone.
+- Bereits lokal gespeicherte Preise bleiben erhalten, wenn ein späterer Download fehlschlägt.
+- Der Workflow kann zusätzlich in GitHub unter Actions > Update Cardmarket prices > Run workflow manuell gestartet werden.

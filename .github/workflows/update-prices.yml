@@ -1,0 +1,55 @@
+name: Update Cardmarket prices
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cardmarket-price-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download official Cardmarket Pokémon files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .price-source
+          curl --fail --location --retry 3 --retry-delay 3 \
+            "https://downloads.s3.cardmarket.com/productCatalog/priceGuide/price_guide_6.json" \
+            -o .price-source/price-guide.json
+          curl --fail --location --retry 3 --retry-delay 3 \
+            "https://downloads.s3.cardmarket.com/productCatalog/productList/products_singles_6.json" \
+            -o .price-source/products.json
+
+      - name: Build compact Pokémon price feed
+        run: python scripts/build_prices.py .price-source/price-guide.json .price-source/products.json data/pokemon-prices.json
+
+      - name: Commit price feed only when changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/pokemon-prices.json; then
+            echo "No price changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/pokemon-prices.json
+          git commit -m "Update Cardmarket Pokémon prices"
+          git push
