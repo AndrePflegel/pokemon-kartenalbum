@@ -3,13 +3,29 @@ const SETS = [
   { id: 'sv10.5b', kind: 'black', label: 'Schwarze Blitze' },
   { id: 'sv10.5w', kind: 'white', label: 'Weiße Flammen' },
 ];
+const EXTRA_CARDS = [
+{id:'extra-svp-208',code:'SVP 208',name:'Victini',kind:'promo',group:'Schwarze Blitze',note:'Unova Victini Illustration Collection'},
+{id:'extra-svp-209',code:'SVP 209',name:'Voltolos',kind:'promo',group:'Schwarze Blitze',note:'Schwarze Blitze Elite-Trainer-Box'},
+{id:'extra-svp-210',code:'SVP 210',name:'Boreos',kind:'promo',group:'Weiße Flammen',note:'Weiße Flammen Elite-Trainer-Box'},
+{id:'extra-svp-211',code:'SVP 211',name:'Morbitesse',kind:'promo',group:'Weiße Flammen',note:'Weiße Flammen Tech-Sticker-Kollektion'},
+{id:'extra-svp-212',code:'SVP 212',name:'Zytomega',kind:'promo',group:'Schwarze Blitze',note:'Schwarze Blitze Tech-Sticker-Kollektion'},
+{id:'extra-sve-017',code:'SVE 017',name:'Basis-Pflanzen-Energie',kind:'energy',group:'Beide Editionen'},
+{id:'extra-sve-018',code:'SVE 018',name:'Basis-Feuer-Energie',kind:'energy',group:'Beide Editionen'},
+{id:'extra-sve-019',code:'SVE 019',name:'Basis-Wasser-Energie',kind:'energy',group:'Beide Editionen'},
+{id:'extra-sve-020',code:'SVE 020',name:'Basis-Elektro-Energie',kind:'energy',group:'Beide Editionen'},
+{id:'extra-sve-021',code:'SVE 021',name:'Basis-Psycho-Energie',kind:'energy',group:'Beide Editionen'},
+{id:'extra-sve-022',code:'SVE 022',name:'Basis-Kampf-Energie',kind:'energy',group:'Beide Editionen'},
+{id:'extra-sve-023',code:'SVE 023',name:'Basis-Finsternis-Energie',kind:'energy',group:'Beide Editionen'},
+{id:'extra-sve-024',code:'SVE 024',name:'Basis-Metall-Energie',kind:'energy',group:'Beide Editionen'}
+];
+
 const STORAGE_KEY = 'pokemon-black-white-owned-v1';
 const DETAIL_CACHE_KEY = 'pokemon-black-white-detail-cache-v1';
-const ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v4';
-const DB_NAME = 'pokemon-kartenalbum-v4';
+const ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v6';
+const DB_NAME = 'pokemon-kartenalbum-v6';
 const DB_VERSION = 1;
 const OWNED_STORE = 'owned';
-const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v4';
+const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v6';
 const REQUEST_TIMEOUT_MS = 15000;
 
 const state = {
@@ -25,7 +41,7 @@ const state = {
 };
 
 const ids = [
-  'statusPanel','statusText','gallery','emptyGallery','checklist','emptyChecklist','searchInput','clearSearch',
+  'statusPanel','statusText','gallery','emptyGallery','checklist','emptyChecklist','extrasCards','extrasSummary','findCards','emptyFind','searchInput','clearSearch',
   'ownedCount','totalCount','blackProgress','whiteProgress','progressRing','progressPercent','progressMessage','progressHero',
   'allTabCount','ownedTabCount','missingTabCount','resultCount','cardDialog','closeDialog','detailImage','detailImageWrap',
   'detailSet','detailName','detailNumber','detailMeta','detailDescription','detailOwnedButton','detailOwnedText','statsButton',
@@ -248,7 +264,7 @@ function ownershipCounts(cards = baseFilteredCards()) {
   const owned = cards.filter(card => state.owned.has(card.id)).length;
   return { all: cards.length, owned, missing: cards.length - owned };
 }
-function renderAll() { renderCounts(); renderGallery(); renderChecklist(); renderStats(); }
+function renderAll() { renderCounts(); renderGallery(); renderChecklist(); renderExtras(); renderFindCards(); renderStats(); }
 
 function renderCounts() {
   const total = state.cards.length;
@@ -375,6 +391,54 @@ function updateDetailOwnedButton() {
   el.detailOwnedText.textContent = owned ? 'Gesammelt' : 'Fehlt';
 }
 
+
+
+function extraImage(extra) { const n=extra.code.split(' ')[1]; const set=extra.kind==='promo'?'svp':'sve'; return `https://assets.tcgdex.net/de/sv/${set}/${n}/low.webp`; }
+function renderExtras() {
+ if(!el.extrasCards)return; const owned=EXTRA_CARDS.filter(x=>state.owned.has(x.id)).length;
+ el.extrasSummary.innerHTML=`<strong>${owned} von ${EXTRA_CARDS.length}</strong><span>Extras gesammelt</span>`;
+ const groups=[['Promos – Schwarze Blitze',EXTRA_CARDS.filter(x=>x.kind==='promo'&&x.group==='Schwarze Blitze')],['Promos – Weiße Flammen',EXTRA_CARDS.filter(x=>x.kind==='promo'&&x.group==='Weiße Flammen')],['Holo-Basisenergien – beide Editionen',EXTRA_CARDS.filter(x=>x.kind==='energy')]];
+ el.extrasCards.innerHTML=groups.map(([title,cards])=>`<section class="extra-group"><h3>${escapeHTML(title)}</h3><div class="extra-grid">${cards.map(x=>{const have=state.owned.has(x.id),q=encodeURIComponent(`Pokémon ${x.name} ${x.code} deutsch`),cm=encodeURIComponent(`${x.name} ${x.code}`);return `<article class="extra-card ${have?'owned':''}"><div class="extra-image-wrap"><img src="${attr(extraImage(x))}" alt="${attr(x.name)}" loading="lazy" onerror="this.style.display='none'"><span>${escapeHTML(x.code)}</span></div><div class="extra-meta"><strong>${escapeHTML(x.name)}</strong><b>${escapeHTML(x.code)}</b>${x.note?`<small>${escapeHTML(x.note)}</small>`:''}</div><button class="extra-own ${have?'is-owned':''}" data-extra-owned="${attr(x.id)}">${have?'Da ✓':'Fehlt'}</button><div class="extra-market"><a href="https://www.ebay.de/sch/i.html?_nkw=${q}" target="_blank" rel="noopener">eBay</a><a href="https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${cm}" target="_blank" rel="noopener">Cardmarket</a></div></article>`}).join('')}</div></section>`).join('');
+}
+
+function marketplaceQuery(card) {
+  const edition = card.setKind === 'black' ? 'Schwarze Blitze' : 'Weiße Flammen';
+  return `Pokémon ${card.name} ${localNumber(card)}/086 ${edition} deutsch`;
+}
+function ebayUrl(card) {
+  return `https://www.ebay.de/sch/i.html?_nkw=${encodeURIComponent(marketplaceQuery(card))}`;
+}
+function cardmarketUrl(card) {
+  return `https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(`${card.name} ${localNumber(card)}`)}`;
+}
+function renderFindCards() {
+  if (!el.findCards || !el.emptyFind) return;
+  let cards = state.cards.filter(card => !state.owned.has(card.id));
+  if (state.setFilter !== 'all') cards = cards.filter(card => card.setKind === state.setFilter);
+  const q = normalized(state.search.trim());
+  if (q) cards = cards.filter(card => normalized(`${card.name} ${localNumber(card)} ${setLabel(card.setKind)} ${card.rarity || ''}`).includes(q));
+  cards.sort(compareCards);
+  el.emptyFind.hidden = cards.length !== 0;
+  el.findCards.innerHTML = cards.map(card => {
+    const denom = card.setCardCount?.official || 86;
+    return `<article class="find-card">
+      <button class="find-preview" type="button" data-open-card="${attr(card.id)}" aria-label="${attr(card.name)} ansehen">
+        <img src="${attr(imageUrl(card.image, 'low'))}" alt="${attr(card.name)}" loading="lazy">
+      </button>
+      <div class="find-info">
+        <div class="find-set"><i class="set-dot ${card.setKind}"></i>${escapeHTML(setLabel(card.setKind))}</div>
+        <strong>${escapeHTML(card.name)}</strong>
+        <span>${escapeHTML(localNumber(card))}/${escapeHTML(denom)}</span>
+        <div class="market-actions">
+          <a class="market-button ebay" href="${attr(ebayUrl(card))}" target="_blank" rel="noopener noreferrer">eBay suchen</a>
+          <a class="market-button cardmarket" href="${attr(cardmarketUrl(card))}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
+        </div>
+      </div>
+      <button class="found-button" type="button" data-toggle-owned="${attr(card.id)}">Jetzt da</button>
+    </article>`;
+  }).join('');
+}
+
 function renderStats() {
   if (!state.cards.length) { el.statsContent.innerHTML = ''; return; }
   const groups = [
@@ -415,6 +479,15 @@ el.gallery.addEventListener('click', event => {
   const open = event.target.closest('[data-card-id]');
   if (open) openCard(open.dataset.cardId);
 });
+
+if (el.extrasCards) el.extrasCards.addEventListener('click', event => { const b=event.target.closest('[data-extra-owned]'); if(b) toggleOwned(b.dataset.extraOwned); });
+if (el.findCards) el.findCards.addEventListener('click', event => {
+  const toggle = event.target.closest('[data-toggle-owned]');
+  if (toggle) { toggleOwned(toggle.dataset.toggleOwned); return; }
+  const open = event.target.closest('[data-open-card]');
+  if (open) openCard(open.dataset.openCard);
+});
+
 el.checklist.addEventListener('click', event => {
   const button = event.target.closest('[data-check-id]');
   if (button) toggleOwned(button.dataset.checkId);
@@ -509,6 +582,7 @@ async function prepareOfflineAlbum() {
     const low = imageUrl(card.image, 'low');
     if (low) tasks.push({ type: 'image', url: low });
   });
+  EXTRA_CARDS.forEach(extra => tasks.push({ type: 'image', url: extraImage(extra) }));
   let done = 0;
   let failed = 0;
   const update = () => {
@@ -522,7 +596,7 @@ async function prepareOfflineAlbum() {
     done++;
     update();
   }, 6);
-  localStorage.setItem('pokemon-offline-ready-v4', JSON.stringify({ savedAt: Date.now(), failed, total: tasks.length }));
+  localStorage.setItem('pokemon-offline-ready-v6', JSON.stringify({ savedAt: Date.now(), failed, total: tasks.length }));
   el.offlineStatus.textContent = failed ? `Offline-Album gespeichert. ${failed} Dateien konnten nicht geladen werden; online werden sie später ergänzt.` : 'Offline bereit: Karten, Bilder und Beschreibungen sind auf diesem Gerät gespeichert.';
   el.offlineButton.textContent = 'Offline-Album aktualisieren';
   el.offlineButton.disabled = false;
@@ -530,7 +604,7 @@ async function prepareOfflineAlbum() {
 
 function updateOfflineStatus() {
   if (!el.offlineStatus) return;
-  const ready = readJSON('pokemon-offline-ready-v4', null);
+  const ready = readJSON('pokemon-offline-ready-v6', null);
   if (ready) {
     const date = new Date(ready.savedAt);
     el.offlineStatus.textContent = `Offline-Album vorhanden · zuletzt gespeichert ${date.toLocaleDateString('de-DE')}.`;

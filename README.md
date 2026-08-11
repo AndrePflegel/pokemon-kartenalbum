@@ -23,3 +23,12 @@ Die PWA-/Service-Worker-Funktionen benötigen HTTPS und sind daher vollständig 
 ## GitHub Pages
 
 Das Repository kann direkt aus dem Root-Verzeichnis über GitHub Pages veröffentlicht werden.
+
+
+## Version 5
+
+Neue Ansicht **Karten finden**: zeigt automatisch fehlende Karten und öffnet vorbereitete Suchen bei eBay und Cardmarket. Sobald eine Karte als vorhanden markiert wird, verschwindet sie aus dieser Ansicht.
+
+
+## Version 6
+Extras: SVP 208–212 sowie die acht Holo-Basisenergien SVE 017–024. Eigener Fortschritt, eigener Besitzstatus und Marktplatzsuche.
