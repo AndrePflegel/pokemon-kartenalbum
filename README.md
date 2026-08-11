@@ -80,3 +80,15 @@ Performance-Update für iPhone/iPad:
 - Kartenbilder bleiben `lazy`, werden asynchron dekodiert und mit niedriger Ladepriorität behandelt.
 - Schnelles Scrollen durch große Sets soll dadurch deutlich stabiler bleiben.
 - Besitzstand, Offline-Daten und Set-Auswahl bleiben erhalten.
+
+
+## Version 12
+
+Cardmarket-Preise in der Marktansicht:
+- Trendpreis, 7-Tage- und 30-Tage-Durchschnitt kompakt direkt an der Karte.
+- Preise werden ausschließlich nach ausdrücklichem Tippen auf **Preise laden / aktualisieren** geladen.
+- Vor jedem Download erscheint ein Hinweis auf Internet-, Mobilfunk- und mögliche Roaming-Nutzung.
+- Keine automatische Aktualisierung beim Appstart, beim Öffnen von Markt oder im Service Worker.
+- Der Preisstand und sein Alter werden sichtbar angezeigt; ab sieben Tagen wird der Status hervorgehoben.
+- Bereits geladene Preise bleiben lokal auf dem Gerät erhalten und funktionieren offline.
+- Datenquelle sind die offiziellen öffentlichen Cardmarket-Dateien `price_guide_6.json` und `products_singles_6.json`.

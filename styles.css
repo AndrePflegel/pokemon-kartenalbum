@@ -159,3 +159,12 @@ dialog{border:0;padding:0;color:var(--text);background:#0a0f16}dialog::backdrop{
   animation:spin .8s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* V12: bewusst manuell geladene Cardmarket-Preise */
+.price-status-box{margin:0 0 12px;border:1px solid var(--line);border-radius:15px;background:rgba(17,23,32,.9);padding:11px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.price-status-copy{display:grid;gap:2px;min-width:0}.price-status-copy strong{font-size:12px}.price-status-copy>span{font-size:9px;color:var(--muted);line-height:1.35}
+.price-status-box[data-age="fresh"]{border-color:rgba(98,209,154,.3)}.price-status-box[data-age="aging"]{border-color:rgba(224,185,88,.35)}.price-status-box[data-age="old"]{border-color:rgba(235,118,92,.48);background:rgba(55,31,29,.38)}
+.price-update-button{flex:0 0 auto;border:1px solid var(--line-strong);background:#202a3a;color:#eef3fb;border-radius:10px;min-height:36px;padding:0 10px;font-size:10px;font-weight:800}.price-update-button:disabled{opacity:.55}
+.market-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:5px}.market-prices>div{border:1px solid var(--line);background:#111722;border-radius:8px;padding:5px;display:grid;gap:1px}.market-prices span{font-size:8px;color:var(--muted)}.market-prices strong{font-size:10px;white-space:nowrap}.market-price-empty{font-size:9px;color:var(--muted-2);margin-top:5px}
+.confirm-dialog{width:min(430px,calc(100% - 22px));border:1px solid var(--line);border-radius:20px;background:#0d131d;color:var(--text);padding:0}.confirm-dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(6px)}.confirm-shell{padding:18px}.confirm-shell h2{font-size:20px;margin:4px 0 10px}.confirm-shell p{font-size:12px;line-height:1.5;color:var(--muted)}.confirm-note{border:1px solid var(--line);border-radius:11px;padding:10px;background:#111722}.confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}.confirm-actions button{min-height:42px;border:1px solid var(--line);border-radius:11px;background:#171e29;color:var(--text);font-weight:800}.confirm-actions .primary{background:#34436c;border-color:#52679d}
+@media(max-width:380px){.price-status-box{align-items:flex-start;flex-direction:column}.market-prices{grid-template-columns:1fr 1fr 1fr}}

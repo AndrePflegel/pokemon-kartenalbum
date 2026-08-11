@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=11">
+  <link rel="stylesheet" href="styles.css?v=12">
 </head>
 <body>
   <div class="app-bg" aria-hidden="true"></div>
@@ -103,6 +103,14 @@
       <div id="extrasSummary" class="extras-summary"></div><div id="extrasCards" class="extras-cards"></div>
     </section>
     <section id="findView" class="view" aria-label="Markt und Preise">
+      <section id="priceStatusBox" class="price-status-box" aria-live="polite">
+        <div class="price-status-copy">
+          <div class="eyebrow">Cardmarket Preisverzeichnis</div>
+          <strong id="priceStatusTitle">Noch keine Preise gespeichert</strong>
+          <span id="priceStatusText">Preise werden niemals automatisch geladen.</span>
+        </div>
+        <button id="updatePricesButton" class="price-update-button" type="button">Preise laden</button>
+      </section>
       <div class="checklist-intro">
         <div class="eyebrow">Preise & Angebote</div>
         <h2>Markt</h2>
@@ -128,6 +136,20 @@
     <button type="button" data-view="findView"><span class="nav-search" aria-hidden="true"></span><span>Markt</span></button>
   </nav>
 
+
+
+  <dialog id="priceUpdateDialog" class="confirm-dialog">
+    <div class="confirm-shell">
+      <div class="eyebrow">Bewusster Internet-Download</div>
+      <h2>Cardmarket-Preise aktualisieren?</h2>
+      <p>Nur wenn du jetzt auf <strong>„Jetzt laden“</strong> tippst, lädt die App die offiziellen Pokémon-Preis- und Produktdaten von Cardmarket. Dabei können mobile Daten und im Ausland Roamingkosten entstehen.</p>
+      <p class="confirm-note">Die App aktualisiert Preise niemals automatisch oder im Hintergrund. Bereits gespeicherte Preise bleiben erhalten, falls der Download fehlschlägt.</p>
+      <div class="confirm-actions">
+        <button id="cancelPriceUpdate" type="button">Abbrechen</button>
+        <button id="confirmPriceUpdate" class="primary" type="button">Jetzt laden</button>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="setsDialog" class="sets-dialog">
     <div class="sets-shell">
@@ -189,6 +211,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=11" defer></script>
+  <script src="app.js?v=12" defer></script>
 </body>
 </html>

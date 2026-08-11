@@ -38,13 +38,16 @@ const CARD_VARIANTS = [
 const STORAGE_KEY = 'pokemon-black-white-owned-v1';
 const DETAIL_CACHE_KEY = 'pokemon-black-white-detail-cache-v1';
 const LEGACY_ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v9';
-const DB_NAME = 'pokemon-kartenalbum-v11';
+const DB_NAME = 'pokemon-kartenalbum-v12';
 const DB_VERSION = 1;
 const OWNED_STORE = 'owned';
-const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v11';
+const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v12';
 const REQUEST_TIMEOUT_MS = 15000;
 const GALLERY_INITIAL_BATCH = 48;
 const GALLERY_NEXT_BATCH = 32;
+const PRICE_STORE_KEY = 'pokemon-cardmarket-prices-v12';
+const CARDMARKET_PRICE_URL = 'https://downloads.s3.cardmarket.com/productCatalog/priceGuide/price_guide_6.json';
+const CARDMARKET_PRODUCTS_URL = 'https://downloads.s3.cardmarket.com/productCatalog/productList/products_singles_6.json';
 
 const state = {
   cards: [],
@@ -62,6 +65,8 @@ const state = {
   galleryRenderLimit: GALLERY_INITIAL_BATCH,
   galleryQueryKey: '',
   galleryObserver: null,
+  priceStore: null,
+  priceUpdating: false,
 };
 
 const ids = [
@@ -69,7 +74,7 @@ const ids = [
   'ownedCount','totalCount','progressSetList','progressRing','progressPercent','progressMessage','progressHero','collectionEyebrow','collectionTitle',
   'allTabCount','ownedTabCount','missingTabCount','resultCount','cardDialog','closeDialog','detailImage','detailImageWrap',
   'detailSet','detailName','detailNumber','detailMeta','detailDescription','detailVariants','detailMarket','detailOwnedButton','detailOwnedText','statsButton',
-  'statsDialog','closeStats','statsContent','exportButton','importInput','setsShortcut','offlineButton','offlineStatus','storageStatus','setsDialog','closeSets','setsCatalog','setsSearchInput','setsCatalogStatus'
+  'statsDialog','closeStats','statsContent','exportButton','importInput','setsShortcut','offlineButton','offlineStatus','storageStatus','setsDialog','closeSets','setsCatalog','setsSearchInput','setsCatalogStatus','priceStatusBox','priceStatusTitle','priceStatusText','updatePricesButton','priceUpdateDialog','cancelPriceUpdate','confirmPriceUpdate'
 ];
 const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
@@ -493,6 +498,167 @@ function toggleOwned(id, force) {
 }
 
 
+
+function priceDataRows(payload) {
+  if (Array.isArray(payload)) return payload;
+  for (const key of ['priceGuide','priceGuides','prices','data','products']) if (Array.isArray(payload?.[key])) return payload[key];
+  return [];
+}
+function productDataRows(payload) {
+  if (Array.isArray(payload)) return payload;
+  for (const key of ['products','product','data']) if (Array.isArray(payload?.[key])) return payload[key];
+  return [];
+}
+function priceNumber(row, ...keys) {
+  for (const key of keys) {
+    const value=row?.[key];
+    if (value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))) return Number(value);
+  }
+  return null;
+}
+function normalizeMarketName(value='') {
+  return normalized(String(value).replace(/\b(v|version)\s*\.?\s*\d+\b/gi,'').replace(/[^\p{L}\p{N}]+/gu,' '));
+}
+function formatEuro(value) {
+  return Number.isFinite(value) ? new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(value) : '–';
+}
+function priceAgeDays(timestamp) {
+  return timestamp ? Math.floor((Date.now()-timestamp)/86400000) : null;
+}
+function renderPriceStatus() {
+  if (!el.priceStatusTitle) return;
+  const store=state.priceStore;
+  if (state.priceUpdating) {
+    el.priceStatusBox.dataset.age='loading';
+    el.priceStatusTitle.textContent='Preise werden geladen …';
+    el.priceStatusText.textContent='Bitte die App geöffnet lassen. Es erfolgt nur dieser bewusst gestartete Download.';
+    el.updatePricesButton.disabled=true;
+    el.updatePricesButton.textContent='Lädt …';
+    return;
+  }
+  el.updatePricesButton.disabled=false;
+  if (!store?.updatedAt) {
+    el.priceStatusBox.dataset.age='none';
+    el.priceStatusTitle.textContent='Noch keine Preise gespeichert';
+    el.priceStatusText.textContent='Keine automatische Aktualisierung. Download nur nach deinem Tippen.';
+    el.updatePricesButton.textContent='Preise laden';
+    return;
+  }
+  const days=priceAgeDays(store.updatedAt);
+  const date=new Intl.DateTimeFormat('de-DE',{dateStyle:'medium'}).format(new Date(store.updatedAt));
+  el.priceStatusBox.dataset.age=days>=7?'old':days>=2?'aging':'fresh';
+  el.priceStatusTitle.textContent=`Preisstand: ${date}`;
+  el.priceStatusText.textContent=days===0?'Heute geladen · lokal auf diesem Gerät gespeichert':days===1?'1 Tag alt · lokal gespeichert':`${days} Tage alt · lokal gespeichert`;
+  el.updatePricesButton.textContent=days>=7?'Preise aktualisieren':'Neu laden';
+}
+function storedPriceFor(item) {
+  if (item.marketType !== 'card') return null;
+  return state.priceStore?.byCardId?.[item.id] || null;
+}
+function priceSummaryHTML(item) {
+  const p=storedPriceFor(item);
+  if (!p) return `<div class="market-price-empty">Kein gespeicherter Preis</div>`;
+  return `<div class="market-prices">
+    <div><span>Trend</span><strong>${formatEuro(p.trend)}</strong></div>
+    <div><span>Ø 7 Tage</span><strong>${formatEuro(p.avg7)}</strong></div>
+    <div><span>Ø 30 Tage</span><strong>${formatEuro(p.avg30)}</strong></div>
+  </div>`;
+}
+async function fetchJSONExplicit(url, label) {
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),45000);
+  try {
+    const response=await fetch(url,{cache:'no-store',signal:controller.signal});
+    if(!response.ok) throw new Error(`${label}: HTTP ${response.status}`);
+    return await response.json();
+  } finally { clearTimeout(timer); }
+}
+function productExpansionName(p) { return p.expansionName || p.expansion?.name || p.expansion || ''; }
+function productName(p) { return p.name || p.productName || ''; }
+function productId(p) { return String(p.idProduct ?? p.id ?? ''); }
+function priceProductId(p) { return String(p.idProduct ?? p.productId ?? p.id ?? ''); }
+function occurrenceRank(cards,index) {
+  const name=normalizeMarketName(cards[index]?.name);
+  let rank=0;
+  for(let i=0;i<index;i++) if(normalizeMarketName(cards[i]?.name)===name) rank++;
+  return rank;
+}
+function chooseProductForCard(card, englishCard, englishCards, products) {
+  const enName=normalizeMarketName(englishCard?.name || card.name);
+  const expansionHints=[
+    state.collection?.name,
+    setLabel(card.setKind),
+    englishCard?.set?.name,
+  ].filter(Boolean).map(normalizeMarketName);
+  let candidates=products.filter(p=>normalizeMarketName(productName(p))===enName);
+  const expansionMatches=candidates.filter(p=>{
+    const ex=normalizeMarketName(productExpansionName(p));
+    return expansionHints.some(h=>h && (ex.includes(h)||h.includes(ex)));
+  });
+  if(expansionMatches.length) candidates=expansionMatches;
+  if(!candidates.length) return null;
+  candidates.sort((a,b)=>Number(productId(a))-Number(productId(b)));
+  const idx=englishCards.findIndex(c=>c.id===englishCard?.id);
+  const rank=idx>=0?occurrenceRank(englishCards,idx):0;
+  return candidates[Math.min(rank,candidates.length-1)] || candidates[0];
+}
+async function loadEnglishCardsForCurrentCollection() {
+  const result=new Map();
+  for(const spec of collectionSetSpecs()) {
+    try {
+      const response=await fetch(`https://api.tcgdex.net/v2/en/sets/${encodeURIComponent(spec.id)}`,{cache:'force-cache'});
+      if(!response.ok) continue;
+      const set=await response.json();
+      result.set(spec.id,Array.isArray(set.cards)?set.cards:[]);
+    } catch(error) { console.warn('Englische Kartennamen nicht geladen:',spec.id,error); }
+  }
+  return result;
+}
+async function updateCardmarketPrices() {
+  if(state.priceUpdating) return;
+  state.priceUpdating=true; renderPriceStatus();
+  try {
+    // Exactly two official Cardmarket files, plus at most one small TCGdex set request per currently opened set for language-safe matching.
+    const [pricePayload,productPayload,englishSets]=await Promise.all([
+      fetchJSONExplicit(CARDMARKET_PRICE_URL,'Preisverzeichnis'),
+      fetchJSONExplicit(CARDMARKET_PRODUCTS_URL,'Produktkatalog'),
+      loadEnglishCardsForCurrentCollection()
+    ]);
+    const priceRows=priceDataRows(pricePayload);
+    const products=productDataRows(productPayload);
+    if(!priceRows.length || !products.length) throw new Error('Cardmarket-Datenformat konnte nicht gelesen werden.');
+    const priceByProduct=new Map(priceRows.map(p=>[priceProductId(p),p]));
+    const byCardId={...(state.priceStore?.byCardId||{})};
+    let matched=0;
+    for(const card of state.cards) {
+      const spec=collectionSetSpecs().find(s=>s.kind===card.setKind);
+      const enCards=englishSets.get(spec?.id)||[];
+      const enCard=enCards.find(c=>String(c.id)===String(card.id)) || enCards.find(c=>String(c.localId||c.id).split('-').pop()===String(card.localId));
+      const product=chooseProductForCard(card,enCard,enCards,products);
+      const row=product ? priceByProduct.get(productId(product)) : null;
+      if(!row) continue;
+      byCardId[card.id]={
+        idProduct:productId(product),
+        trend:priceNumber(row,'trend','trendPrice','priceTrend'),
+        avg1:priceNumber(row,'avg1','avg1d','average1'),
+        avg7:priceNumber(row,'avg7','avg7d','average7'),
+        avg30:priceNumber(row,'avg30','avg30d','average30')
+      };
+      matched++;
+    }
+    const next={updatedAt:Date.now(),byCardId,matched,lastCollection:state.collection.id};
+    localStorage.setItem(PRICE_STORE_KEY,JSON.stringify(next));
+    state.priceStore=next;
+    renderPriceStatus(); renderFindCards();
+    alert(`Preisstand gespeichert. ${matched} Karten der geöffneten Kollektion konnten Cardmarket-Preisen zugeordnet werden.`);
+  } catch(error) {
+    console.error('Preisaktualisierung fehlgeschlagen:',error);
+    alert(`Preise konnten nicht aktualisiert werden.\n\n${error.message}\n\nVorhandene gespeicherte Preise wurden nicht verändert.`);
+  } finally {
+    state.priceUpdating=false; renderPriceStatus();
+  }
+}
+
 function ebaySearchText(item) {
   if (item.marketType === 'extra') return `Pokemon ${item.name} ${item.code}`;
   if (item.marketType === 'variant') return `Pokemon ${item.name} ${item.localId} ${item.label}`;
@@ -707,7 +873,7 @@ function renderFindCards() {
     const have=state.owned.has(item.id), kind=marketSetKind(item), typeLabel=item.marketType==='card'?'Setkarte':item.marketType==='extra'?'Extra':'Variante';
     const openAttr=item.marketType==='card'?`data-market-open-card="${attr(item.id)}"`:item.marketType==='extra'?`data-market-open-extra="${attr(item.id)}"`:`data-market-open-variant="${attr(item.id)}"`;
     const image=marketImage(item);
-    return `<article class="find-card market-card ${have?'owned':''}"><button class="find-preview" type="button" ${openAttr} aria-label="${attr(item.name)} ansehen"><img src="${attr(image)}" alt="${attr(item.name)}" loading="lazy"></button><div class="find-info"><div class="find-set"><i class="set-dot ${kind==='both'?'black':kind}"></i>${escapeHTML(typeLabel)} · ${escapeHTML(kind==='both'?'Beide Editionen':setLabel(kind))}</div><strong>${escapeHTML(item.name)}</strong><span>${escapeHTML(marketSubtitle(item))}</span><div class="market-owned-state ${have?'have':''}">${have?'Gesammelt':'Fehlt'}</div><div class="market-actions"><a class="market-button cardmarket" href="${attr(cardmarketSearchUrl(item))}" target="_blank" rel="noopener noreferrer">Cardmarket</a><a class="market-button ebay" href="${attr(ebaySearchUrl(item))}" target="_blank" rel="noopener noreferrer">eBay</a><button class="market-button copy" type="button" data-market-copy="${attr(item.marketType+':'+item.id)}">eBay-Suche kopieren</button></div></div></article>`;
+    return `<article class="find-card market-card ${have?'owned':''}"><button class="find-preview" type="button" ${openAttr} aria-label="${attr(item.name)} ansehen"><img src="${attr(image)}" alt="${attr(item.name)}" loading="lazy"></button><div class="find-info"><div class="find-set"><i class="set-dot ${kind==='both'?'black':kind}"></i>${escapeHTML(typeLabel)} · ${escapeHTML(kind==='both'?'Beide Editionen':setLabel(kind))}</div><strong>${escapeHTML(item.name)}</strong><span>${escapeHTML(marketSubtitle(item))}</span><div class="market-owned-state ${have?'have':''}">${have?'Gesammelt':'Fehlt'}</div>${priceSummaryHTML(item)}<div class="market-actions"><a class="market-button cardmarket" href="${attr(cardmarketSearchUrl(item))}" target="_blank" rel="noopener noreferrer">Cardmarket</a><a class="market-button ebay" href="${attr(ebaySearchUrl(item))}" target="_blank" rel="noopener noreferrer">eBay</a><button class="market-button copy" type="button" data-market-copy="${attr(item.marketType+':'+item.id)}">eBay-Suche kopieren</button></div></div></article>`;
   }).join('');
 }
 
@@ -878,6 +1044,7 @@ async function switchCollection(collection) {
   el.setsDialog.close();
   switchView('galleryView');
   renderCollectionChrome();
+  renderPriceStatus();
   updateOfflineStatus();
   await loadData();
 }
@@ -889,6 +1056,14 @@ el.setsCatalog?.addEventListener('click', event => {
   if (!button) return;
   const brief = state.catalog.find(s => s.id === button.dataset.collectionSet);
   if (brief) switchCollection(makeGenericCollection(brief));
+});
+
+
+el.updatePricesButton?.addEventListener('click',()=>el.priceUpdateDialog.showModal());
+el.cancelPriceUpdate?.addEventListener('click',()=>el.priceUpdateDialog.close());
+el.confirmPriceUpdate?.addEventListener('click',()=>{
+  el.priceUpdateDialog.close();
+  updateCardmarketPrices();
 });
 
 el.exportButton.addEventListener('click', () => {
@@ -1001,9 +1176,11 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
 
 (async () => {
   state.collection = restoreCollectionSelection();
+  try { state.priceStore=JSON.parse(localStorage.getItem(PRICE_STORE_KEY)||'null'); } catch { state.priceStore=null; }
   SETS = state.collection.sets.slice();
   await initPersistentStorage();
   renderCollectionChrome();
+  renderPriceStatus();
   updateOfflineStatus();
   await loadData();
   renderAll();
