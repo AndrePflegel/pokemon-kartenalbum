@@ -28,11 +28,11 @@ const CARD_VARIANTS = [
 
 const STORAGE_KEY = 'pokemon-black-white-owned-v1';
 const DETAIL_CACHE_KEY = 'pokemon-black-white-detail-cache-v1';
-const ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v8';
-const DB_NAME = 'pokemon-kartenalbum-v8';
+const ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v9';
+const DB_NAME = 'pokemon-kartenalbum-v9';
 const DB_VERSION = 1;
 const OWNED_STORE = 'owned';
-const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v8';
+const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v9';
 const REQUEST_TIMEOUT_MS = 15000;
 
 const state = {
@@ -43,6 +43,7 @@ const state = {
   detailCache: readJSON(DETAIL_CACHE_KEY, {}),
   setFilter: 'all',
   ownershipFilter: 'all',
+  marketOwnershipFilter: 'all',
   search: '',
   activeCardId: null,
 };
@@ -51,7 +52,7 @@ const ids = [
   'statusPanel','statusText','gallery','emptyGallery','checklist','emptyChecklist','extrasCards','extrasSummary','findCards','emptyFind','searchInput','clearSearch',
   'ownedCount','totalCount','blackProgress','whiteProgress','progressRing','progressPercent','progressMessage','progressHero',
   'allTabCount','ownedTabCount','missingTabCount','resultCount','cardDialog','closeDialog','detailImage','detailImageWrap',
-  'detailSet','detailName','detailNumber','detailMeta','detailDescription','detailVariants','detailOwnedButton','detailOwnedText','statsButton',
+  'detailSet','detailName','detailNumber','detailMeta','detailDescription','detailVariants','detailMarket','detailOwnedButton','detailOwnedText','statsButton',
   'statsDialog','closeStats','statsContent','exportButton','importInput','setsShortcut','offlineButton','offlineStatus','storageStatus'
 ];
 const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
@@ -352,7 +353,47 @@ function toggleOwned(id, force) {
   if (next) state.owned.add(id); else state.owned.delete(id);
   writeOwned(id, next);
   renderAll();
-  if (state.activeCardId === id && el.cardDialog.open) updateDetailOwnedButton();
+  if (state.activeCardId === id && el.cardDialog.open) { updateDetailOwnedButton(); renderDetailMarket(marketDescriptorForActive()); }
+}
+
+
+function setCodeForCard(card) { return card.setKind === 'black' ? 'BLK' : 'WHT'; }
+function ebaySearchText(item) {
+  if (item.marketType === 'extra') return `Pokemon ${item.name} ${item.code}`;
+  if (item.marketType === 'variant') return `Pokemon ${item.name} ${item.localId} ${item.label}`;
+  return `Pokemon ${item.name} ${localNumber(item)} ${setLabel(item.setKind)}`;
+}
+function cardmarketSearchText(item) {
+  if (item.marketType === 'extra') return `${item.name} ${item.code}`;
+  if (item.marketType === 'variant') return `${item.name} ${setCodeForCard({setKind:item.setKind})} ${item.localId} ${item.label}`;
+  return `${item.name} ${setCodeForCard(item)} ${localNumber(item)}`;
+}
+function ebaySearchUrl(item) {
+  const q = encodeURIComponent(ebaySearchText(item));
+  return `https://www.ebay.de/sch/i.html?_nkw=${q}&_sacat=0&_sop=12`;
+}
+function cardmarketSearchUrl(item) {
+  return `https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(cardmarketSearchText(item))}`;
+}
+async function copyEbaySearch(item) {
+  const text = ebaySearchText(item);
+  try { await navigator.clipboard.writeText(text); alert(`eBay-Suchtext kopiert:\n${text}`); }
+  catch { prompt('Diesen Suchtext in eBay einfügen:', text); }
+}
+function marketDescriptorForActive() {
+  const card = state.cards.find(x => x.id === state.activeCardId);
+  if (card) return {...card, marketType:'card'};
+  const extra = EXTRA_CARDS.find(x => x.id === state.activeCardId);
+  if (extra) return {...extra, marketType:'extra'};
+  const variant = CARD_VARIANTS.find(x => x.id === state.activeCardId);
+  if (variant) return {...variant, marketType:'variant'};
+  return null;
+}
+function renderDetailMarket(item) {
+  if (!el.detailMarket) return;
+  if (!item) { el.detailMarket.innerHTML=''; return; }
+  const have = state.owned.has(item.id);
+  el.detailMarket.innerHTML = `<section class="detail-market-box"><div class="eyebrow">Preise & Angebote</div><div class="detail-market-status">${have ? 'In deiner Sammlung' : 'Fehlt noch'}</div><div class="detail-market-actions"><a class="market-button cardmarket" href="${attr(cardmarketSearchUrl(item))}" target="_blank" rel="noopener noreferrer">Cardmarket</a><a class="market-button ebay" href="${attr(ebaySearchUrl(item))}" target="_blank" rel="noopener noreferrer">eBay</a><button class="market-button copy" type="button" data-copy-ebay-active>eBay-Suche kopieren</button></div></section>`;
 }
 
 async function openCard(id) {
@@ -368,6 +409,7 @@ async function openCard(id) {
   el.detailMeta.innerHTML = '<div class="meta-item"><span>Status</span><strong>Details werden geladen …</strong></div>';
   el.detailDescription.innerHTML = '';
   renderCardVariants(card);
+  renderDetailMarket({...card, marketType:'card'});
   updateDetailOwnedButton();
   if (!el.cardDialog.open) el.cardDialog.showModal();
 
@@ -421,7 +463,7 @@ function renderCardVariants(card) {
         <div class="variant-image-wrap"><img src="${attr(sources[0] || '')}" data-sources='${imageFallbackAttr(sources)}' data-source-index="0" onerror="applyImageFallback(this)" alt="${attr(v.name + ' ' + v.label)}" loading="lazy"></div>
         <span class="variant-enlarge">Groß ansehen</span>
       </button>
-      <div class="variant-copy"><strong>${escapeHTML(v.label)}</strong><span>${escapeHTML(v.origin)}</span><small>${escapeHTML(v.note)}</small><a href="https://www.ebay.de/sch/i.html?_nkw=${q}" target="_blank" rel="noopener">Angebote suchen</a></div>
+      <div class="variant-copy"><strong>${escapeHTML(v.label)}</strong><span>${escapeHTML(v.origin)}</span><small>${escapeHTML(v.note)}</small><div class="variant-market"><a href="${attr(cardmarketSearchUrl({...v,marketType:'variant'}))}" target="_blank" rel="noopener">Cardmarket</a><a href="${attr(ebaySearchUrl({...v,marketType:'variant'}))}" target="_blank" rel="noopener">eBay</a><button type="button" data-copy-ebay-variant="${attr(v.id)}">Suche kopieren</button></div></div>
       <button type="button" class="variant-own ${have ? 'is-owned' : ''}" data-variant-owned="${attr(v.id)}">${have ? 'Da ✓' : 'Fehlt'}</button>
     </article>`;
   }).join('')}</div></details>`;
@@ -445,6 +487,7 @@ function openVariant(id) {
   el.detailMeta.innerHTML = `<div class="meta-item"><span>Variante</span><strong>${escapeHTML(variant.label)}</strong></div><div class="meta-item"><span>Herkunft</span><strong>${escapeHTML(variant.origin)}</strong></div>`;
   el.detailDescription.innerHTML = `<h3>Deutsche Sondervariante</h3><p>${escapeHTML(variant.note)}</p><p class="variant-parent-note">Sie gehört zur regulären Setkarte ${escapeHTML(variant.name)} ${escapeHTML(variant.localId)}/086.</p>`;
   el.detailVariants.innerHTML = '';
+  renderDetailMarket({...variant, marketType:'variant'});
   updateDetailOwnedButton();
   if (!el.cardDialog.open) el.cardDialog.showModal();
   el.cardDialog.scrollTop = 0;
@@ -470,7 +513,7 @@ async function openExtra(id) {
   el.detailImageWrap.classList.remove('zoomed');
   el.detailMeta.innerHTML=`<div class="meta-item"><span>Herkunft</span><strong>${escapeHTML(extra.note||extra.group)}</strong></div><div class="meta-item"><span>Kennung</span><strong>${escapeHTML(extra.code)}</strong></div>`;
   el.detailDescription.innerHTML='<p>Kartendetails werden geladen …</p>';
-  el.detailVariants.innerHTML=''; updateDetailOwnedButton(); if(!el.cardDialog.open)el.cardDialog.showModal();
+  el.detailVariants.innerHTML=''; renderDetailMarket({...extra, marketType:'extra'}); updateDetailOwnedButton(); if(!el.cardDialog.open)el.cardDialog.showModal();
   if(extra.apiId){
     try{let detail=state.detailCache[extra.apiId]; if(!detail){const raw=await apiGet(`/cards/${encodeURIComponent(extra.apiId)}`); detail=raw?.data??raw; state.detailCache[extra.apiId]=detail; writeJSON(DETAIL_CACHE_KEY,state.detailCache);} if(state.activeCardId===id)renderExtraDetail(extra,detail);}catch(e){if(state.activeCardId===id)el.detailDescription.innerHTML=`<p>${escapeHTML(extra.note||'Deutsche Zusatzkarte zu Schwarze Blitze / Weiße Flammen.')}</p>`;}
   } else el.detailDescription.innerHTML='<p>Spezielle Holo-Basisenergie aus den Produkten Schwarze Blitze & Weiße Flammen.</p>';
@@ -486,43 +529,50 @@ function renderExtras() {
  if(!el.extrasCards)return; const owned=EXTRA_CARDS.filter(x=>state.owned.has(x.id)).length;
  el.extrasSummary.innerHTML=`<strong>${owned} von ${EXTRA_CARDS.length}</strong><span>deutsche Extras gesammelt</span>`;
  const groups=[['Promos – Schwarze Blitze',EXTRA_CARDS.filter(x=>x.kind==='promo'&&x.group==='Schwarze Blitze')],['Promos – Weiße Flammen',EXTRA_CARDS.filter(x=>x.kind==='promo'&&x.group==='Weiße Flammen')],['Holo-Basisenergien – beide Editionen',EXTRA_CARDS.filter(x=>x.kind==='energy')]];
- el.extrasCards.innerHTML=groups.map(([title,cards])=>`<section class="extra-group"><h3>${escapeHTML(title)}</h3><div class="extra-grid">${cards.map(x=>{const have=state.owned.has(x.id),q=encodeURIComponent(`Pokémon ${x.name} ${x.code} deutsch`),cm=encodeURIComponent(`${x.name} ${x.code}`),sources=extraImageSources(x);return `<article class="extra-card ${have?'owned':''}"><button class="extra-open" type="button" data-extra-open="${attr(x.id)}"><div class="extra-image-wrap"><img src="${attr(sources[0]||'')}" data-sources='${imageFallbackAttr(sources)}' data-source-index="0" alt="${attr(x.name)}" loading="lazy" onerror="applyImageFallback(this)"><span>${escapeHTML(x.code)}</span></div><div class="extra-meta"><strong>${escapeHTML(x.name)}</strong><b>${escapeHTML(x.code)}</b>${x.note?`<small>${escapeHTML(x.note)}</small>`:''}</div></button><button class="extra-own ${have?'is-owned':''}" data-extra-owned="${attr(x.id)}">${have?'Da ✓':'Fehlt'}</button><div class="extra-market"><a href="https://www.ebay.de/sch/i.html?_nkw=${q}" target="_blank" rel="noopener">eBay</a><a href="https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${cm}" target="_blank" rel="noopener">Cardmarket</a></div></article>`}).join('')}</div></section>`).join('');
+ el.extrasCards.innerHTML=groups.map(([title,cards])=>`<section class="extra-group"><h3>${escapeHTML(title)}</h3><div class="extra-grid">${cards.map(x=>{const have=state.owned.has(x.id),q=encodeURIComponent(`Pokémon ${x.name} ${x.code} deutsch`),cm=encodeURIComponent(`${x.name} ${x.code}`),sources=extraImageSources(x);return `<article class="extra-card ${have?'owned':''}"><button class="extra-open" type="button" data-extra-open="${attr(x.id)}"><div class="extra-image-wrap"><img src="${attr(sources[0]||'')}" data-sources='${imageFallbackAttr(sources)}' data-source-index="0" alt="${attr(x.name)}" loading="lazy" onerror="applyImageFallback(this)"><span>${escapeHTML(x.code)}</span></div><div class="extra-meta"><strong>${escapeHTML(x.name)}</strong><b>${escapeHTML(x.code)}</b>${x.note?`<small>${escapeHTML(x.note)}</small>`:''}</div></button><button class="extra-own ${have?'is-owned':''}" data-extra-owned="${attr(x.id)}">${have?'Da ✓':'Fehlt'}</button><div class="extra-market"><a href="${attr(cardmarketSearchUrl({...x,marketType:'extra'}))}" target="_blank" rel="noopener">Cardmarket</a><a href="${attr(ebaySearchUrl({...x,marketType:'extra'}))}" target="_blank" rel="noopener">eBay</a><button type="button" data-copy-ebay-extra="${attr(x.id)}">Kopieren</button></div></article>`}).join('')}</div></section>`).join('');
 }
-function marketplaceQuery(card) {
-  const edition = card.setKind === 'black' ? 'Schwarze Blitze' : 'Weiße Flammen';
-  return `Pokémon ${card.name} ${localNumber(card)}/086 ${edition} deutsch`;
+
+function marketSetKind(item) {
+  if (item.marketType === 'card' || item.marketType === 'variant') return item.setKind;
+  if (item.group === 'Schwarze Blitze') return 'black';
+  if (item.group === 'Weiße Flammen') return 'white';
+  return 'both';
 }
-function ebayUrl(card) {
-  return `https://www.ebay.de/sch/i.html?_nkw=${encodeURIComponent(marketplaceQuery(card))}`;
+function marketImage(item) {
+  if (item.marketType === 'card') return imageUrl(item.image, 'low');
+  if (item.marketType === 'extra') return extraImageSources(item)[0] || '';
+  const parent=state.cards.find(c=>c.setKind===item.setKind && localNumber(c)===item.localId);
+  return variantImageSources(item,parent)[0] || '';
 }
-function cardmarketUrl(card) {
-  return `https://www.cardmarket.com/de/Pokemon/Products/Search?searchString=${encodeURIComponent(`${card.name} ${localNumber(card)}`)}`;
+function marketSubtitle(item) {
+  if (item.marketType === 'card') return `${setCodeForCard(item)} ${localNumber(item)}`;
+  if (item.marketType === 'extra') return item.code;
+  return `${setCodeForCard({setKind:item.setKind})} ${item.localId} · ${item.label}`;
+}
+function allMarketItems() {
+  const cards=state.cards.map(card=>({...card,marketType:'card'}));
+  const extras=EXTRA_CARDS.map(extra=>({...extra,marketType:'extra'}));
+  const variants=CARD_VARIANTS.map(v=>({...v,marketType:'variant'}));
+  return [...cards,...extras,...variants];
 }
 function renderFindCards() {
   if (!el.findCards || !el.emptyFind) return;
-  let cards = state.cards.filter(card => !state.owned.has(card.id));
-  if (state.setFilter !== 'all') cards = cards.filter(card => card.setKind === state.setFilter);
-  const q = normalized(state.search.trim());
-  if (q) cards = cards.filter(card => normalized(`${card.name} ${localNumber(card)} ${setLabel(card.setKind)} ${card.rarity || ''}`).includes(q));
-  cards.sort(compareCards);
-  el.emptyFind.hidden = cards.length !== 0;
-  el.findCards.innerHTML = cards.map(card => {
-    const denom = card.setCardCount?.official || 86;
-    return `<article class="find-card">
-      <button class="find-preview" type="button" data-open-card="${attr(card.id)}" aria-label="${attr(card.name)} ansehen">
-        <img src="${attr(imageUrl(card.image, 'low'))}" alt="${attr(card.name)}" loading="lazy">
-      </button>
-      <div class="find-info">
-        <div class="find-set"><i class="set-dot ${card.setKind}"></i>${escapeHTML(setLabel(card.setKind))}</div>
-        <strong>${escapeHTML(card.name)}</strong>
-        <span>${escapeHTML(localNumber(card))}/${escapeHTML(denom)}</span>
-        <div class="market-actions">
-          <a class="market-button ebay" href="${attr(ebayUrl(card))}" target="_blank" rel="noopener noreferrer">eBay suchen</a>
-          <a class="market-button cardmarket" href="${attr(cardmarketUrl(card))}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
-        </div>
-      </div>
-      <button class="found-button" type="button" data-toggle-owned="${attr(card.id)}">Jetzt da</button>
-    </article>`;
+  let items=allMarketItems();
+  if (state.setFilter !== 'all') items=items.filter(item=>{const k=marketSetKind(item);return k===state.setFilter || k==='both';});
+  if (state.marketOwnershipFilter === 'owned') items=items.filter(item=>state.owned.has(item.id));
+  if (state.marketOwnershipFilter === 'missing') items=items.filter(item=>!state.owned.has(item.id));
+  const q=normalized(state.search.trim());
+  if(q) items=items.filter(item=>normalized(`${item.name} ${marketSubtitle(item)} ${item.label||''} ${item.note||''} ${item.rarity||''}`).includes(q));
+  items.sort((a,b)=>{
+    const ka=marketSetKind(a),kb=marketSetKind(b); if(ka!==kb)return ({black:0,white:1,both:2}[ka]??3)-({black:0,white:1,both:2}[kb]??3);
+    const na=parseInt(String(a.localId||a.code||'999').replace(/\D/g,''),10)||9999, nb=parseInt(String(b.localId||b.code||'999').replace(/\D/g,''),10)||9999; return na-nb || String(a.name).localeCompare(String(b.name),'de');
+  });
+  el.emptyFind.hidden=items.length!==0;
+  el.findCards.innerHTML=items.map(item=>{
+    const have=state.owned.has(item.id), kind=marketSetKind(item), typeLabel=item.marketType==='card'?'Setkarte':item.marketType==='extra'?'Extra':'Variante';
+    const openAttr=item.marketType==='card'?`data-market-open-card="${attr(item.id)}"`:item.marketType==='extra'?`data-market-open-extra="${attr(item.id)}"`:`data-market-open-variant="${attr(item.id)}"`;
+    const image=marketImage(item);
+    return `<article class="find-card market-card ${have?'owned':''}"><button class="find-preview" type="button" ${openAttr} aria-label="${attr(item.name)} ansehen"><img src="${attr(image)}" alt="${attr(item.name)}" loading="lazy"></button><div class="find-info"><div class="find-set"><i class="set-dot ${kind==='both'?'black':kind}"></i>${escapeHTML(typeLabel)} · ${escapeHTML(kind==='both'?'Beide Editionen':setLabel(kind))}</div><strong>${escapeHTML(item.name)}</strong><span>${escapeHTML(marketSubtitle(item))}</span><div class="market-owned-state ${have?'have':''}">${have?'Gesammelt':'Fehlt'}</div><div class="market-actions"><a class="market-button cardmarket" href="${attr(cardmarketSearchUrl(item))}" target="_blank" rel="noopener noreferrer">Cardmarket</a><a class="market-button ebay" href="${attr(ebaySearchUrl(item))}" target="_blank" rel="noopener noreferrer">eBay</a><button class="market-button copy" type="button" data-market-copy="${attr(item.marketType+':'+item.id)}">eBay-Suche kopieren</button></div></div></article>`;
   }).join('');
 }
 
@@ -558,6 +608,13 @@ document.getElementById('ownershipFilter').addEventListener('click', event => {
   setActiveButtons(event.currentTarget, 'button[data-owned]', state.ownershipFilter, 'owned');
   renderAll();
 });
+const marketFilterEl=document.getElementById('marketFilter');
+if(marketFilterEl) marketFilterEl.addEventListener('click',event=>{
+  const button=event.target.closest('button[data-market-owned]'); if(!button)return;
+  state.marketOwnershipFilter=button.dataset.marketOwned;
+  setActiveButtons(marketFilterEl,'button[data-market-owned]',state.marketOwnershipFilter,'marketOwned');
+  renderFindCards();
+});
 el.searchInput.addEventListener('input', () => { state.search = el.searchInput.value; renderAll(); });
 el.clearSearch.addEventListener('click', () => { el.searchInput.value = ''; state.search = ''; el.searchInput.focus(); renderAll(); });
 el.gallery.addEventListener('click', event => {
@@ -570,14 +627,15 @@ el.gallery.addEventListener('click', event => {
 if (el.extrasCards) el.extrasCards.addEventListener('click', event => {
   const owned = event.target.closest('[data-extra-owned]');
   if (owned) { toggleOwned(owned.dataset.extraOwned); return; }
+  const copy=event.target.closest('[data-copy-ebay-extra]'); if(copy){const x=EXTRA_CARDS.find(i=>i.id===copy.dataset.copyEbayExtra);if(x)copyEbaySearch({...x,marketType:'extra'});return;}
   const open = event.target.closest('[data-extra-open]');
   if (open) openExtra(open.dataset.extraOpen);
 });
 if (el.findCards) el.findCards.addEventListener('click', event => {
-  const toggle = event.target.closest('[data-toggle-owned]');
-  if (toggle) { toggleOwned(toggle.dataset.toggleOwned); return; }
-  const open = event.target.closest('[data-open-card]');
-  if (open) openCard(open.dataset.openCard);
+  const card=event.target.closest('[data-market-open-card]'); if(card){openCard(card.dataset.marketOpenCard);return;}
+  const extra=event.target.closest('[data-market-open-extra]'); if(extra){openExtra(extra.dataset.marketOpenExtra);return;}
+  const variant=event.target.closest('[data-market-open-variant]'); if(variant){openVariant(variant.dataset.marketOpenVariant);return;}
+  const copy=event.target.closest('[data-market-copy]'); if(copy){const [type,id]=copy.dataset.marketCopy.split(':'); const item=type==='card'?state.cards.find(x=>x.id===id):type==='extra'?EXTRA_CARDS.find(x=>x.id===id):CARD_VARIANTS.find(x=>x.id===id); if(item)copyEbaySearch({...item,marketType:type});}
 });
 
 el.checklist.addEventListener('click', event => {
@@ -588,10 +646,12 @@ el.checklist.addEventListener('click', event => {
 if (el.detailVariants) el.detailVariants.addEventListener('click', event => {
   const owned = event.target.closest('[data-variant-owned]');
   if (owned) { toggleOwned(owned.dataset.variantOwned); return; }
+  const copy=event.target.closest('[data-copy-ebay-variant]'); if(copy){const v=CARD_VARIANTS.find(i=>i.id===copy.dataset.copyEbayVariant);if(v)copyEbaySearch({...v,marketType:'variant'});return;}
   const open = event.target.closest('[data-variant-open]');
   if (open) openVariant(open.dataset.variantOpen);
 });
 
+if(el.detailMarket)el.detailMarket.addEventListener('click',event=>{if(event.target.closest('[data-copy-ebay-active]')){const item=marketDescriptorForActive();if(item)copyEbaySearch(item);}});
 el.detailOwnedButton.addEventListener('click', () => state.activeCardId && toggleOwned(state.activeCardId));
 el.closeDialog.addEventListener('click', () => el.cardDialog.close());
 el.cardDialog.addEventListener('close', () => { state.activeCardId = null; el.detailImageWrap.classList.remove('zoomed'); });

@@ -1,5 +1,5 @@
 const APP_CACHE = 'pokemon-kartenalbum-app-v7';
-const CONTENT_CACHE = 'pokemon-kartenalbum-content-v8';
+const CONTENT_CACHE = 'pokemon-kartenalbum-content-v9';
 const APP_FILES = ['./','./index.html','./styles.css?v=7','./app.js?v=7','./manifest.webmanifest','./icon.svg','./apple-touch-icon.png','./icon-512.png'];
 
 self.addEventListener('install', event => {

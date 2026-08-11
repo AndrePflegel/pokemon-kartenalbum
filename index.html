@@ -109,16 +109,21 @@
       <div class="checklist-intro"><div class="eyebrow">Zusatzkarten</div><h2>Promos & Energien</h2><p>Die fünf Illustration-Promos SVP 208–212 und die acht Holo-Basisenergien SVE 017–024, getrennt von der offiziellen Nummerierung der Hauptsets.</p></div>
       <div id="extrasSummary" class="extras-summary"></div><div id="extrasCards" class="extras-cards"></div>
     </section>
-    <section id="findView" class="view" aria-label="Fehlende Karten finden">
+    <section id="findView" class="view" aria-label="Markt und Preise">
       <div class="checklist-intro">
-        <div class="eyebrow">Fehlende Karten suchen</div>
-        <h2>Karten finden</h2>
-        <p>Hier erscheinen automatisch nur Karten, die noch fehlen. Die Suche öffnet passende Angebote beim jeweiligen Marktplatz; gekauft wird immer dort.</p>
+        <div class="eyebrow">Preise & Angebote</div>
+        <h2>Markt</h2>
+        <p>Alle Hauptkarten, deutschen Extras und Sondervarianten. Cardmarket und eBay öffnen passende Suchergebnisse beim jeweiligen Anbieter.</p>
+        <div id="marketFilter" class="market-filter" aria-label="Markt filtern">
+          <button type="button" data-market-owned="all" class="active">Alle</button>
+          <button type="button" data-market-owned="missing">Fehlen</button>
+          <button type="button" data-market-owned="owned">Gesammelt</button>
+        </div>
       </div>
       <div id="findCards" class="find-cards"></div>
       <div id="emptyFind" class="empty-state" hidden>
-        <strong>Im aktuellen Filter fehlt keine Karte.</strong>
-        <p>Oder ändere oben Edition oder Suche.</p>
+        <strong>Keine Karten passen zu deiner Marktauswahl.</strong>
+        <p>Ändere Filter, Edition oder Suche.</p>
       </div>
     </section>
   </main>
@@ -127,7 +132,7 @@
     <button type="button" class="active" data-view="galleryView"><span class="nav-grid" aria-hidden="true"></span><span>Album</span></button>
     <button type="button" data-view="checklistView"><span class="nav-list" aria-hidden="true"></span><span>Checkliste</span></button>
     <button type="button" data-view="extrasView"><span class="nav-star" aria-hidden="true">★</span><span>Extras</span></button>
-    <button type="button" data-view="findView"><span class="nav-search" aria-hidden="true"></span><span>Finden</span></button>
+    <button type="button" data-view="findView"><span class="nav-search" aria-hidden="true"></span><span>Markt</span></button>
   </nav>
 
   <dialog id="cardDialog" class="card-dialog">
@@ -147,6 +152,7 @@
         <div id="detailMeta" class="meta-grid"></div>
         <div id="detailDescription" class="description"></div>
         <div id="detailVariants" class="detail-variants"></div>
+        <div id="detailMarket" class="detail-market"></div>
       </div>
     </div>
   </dialog>
@@ -170,6 +176,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=8" defer></script>
+  <script src="app.js?v=9" defer></script>
 </body>
 </html>

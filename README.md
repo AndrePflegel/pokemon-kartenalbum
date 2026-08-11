@@ -48,3 +48,12 @@ Extras: SVP 208–212 sowie die acht Holo-Basisenergien SVE 017–024. Eigener F
 - Extras lassen sich durch Antippen von Bild oder Kartentext in derselben großen Zoomansicht wie reguläre Karten öffnen.
 - Deutsche Sondervarianten unter einer Setkarte lassen sich ebenfalls antippen und groß anzeigen.
 - Besitzstatus bleibt für Hauptkarte, Extra und Variante jeweils getrennt gespeichert.
+
+
+## Version 9
+
+- Marktansicht für **alle** Hauptkarten, deutschen Extras und deutschen Sondervarianten.
+- Marktfilter Alle / Fehlen / Gesammelt.
+- Cardmarket-Suche verwendet Kartenname + Setcode (BLK/WHT) + Nummer.
+- eBay verwendet bewusst kürzere Suchtexte; zusätzlich kann der eBay-Suchtext kopiert werden, falls die iPhone-eBay-App eine Websuche nicht korrekt übernimmt.
+- Marktlinks stehen auch in der großen Kartenansicht.
