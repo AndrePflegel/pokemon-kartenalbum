@@ -41,3 +41,10 @@ Extras: SVP 208–212 sowie die acht Holo-Basisenergien SVE 017–024. Eigener F
 - SVP 208–212 und SVE 017–024 lassen sich antippen und groß ansehen; verfügbare TCGdex-Details werden nachgeladen.
 - Deutsche Produktvarianten erscheinen platzsparend direkt in der Detailansicht ihrer Set-Karte: Serpifeu Poster-Holo, Floink Poster-Holo, Ottaro Poster-Holo und Victini Premium-Pokéball.
 - Internationale, regionale und Turnier-Stempelvarianten werden bewusst nicht in den deutschen Fortschritt gemischt.
+
+
+## Version 8
+
+- Extras lassen sich durch Antippen von Bild oder Kartentext in derselben großen Zoomansicht wie reguläre Karten öffnen.
+- Deutsche Sondervarianten unter einer Setkarte lassen sich ebenfalls antippen und groß anzeigen.
+- Besitzstatus bleibt für Hauptkarte, Extra und Variante jeweils getrennt gespeichert.

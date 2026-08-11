@@ -28,11 +28,11 @@ const CARD_VARIANTS = [
 
 const STORAGE_KEY = 'pokemon-black-white-owned-v1';
 const DETAIL_CACHE_KEY = 'pokemon-black-white-detail-cache-v1';
-const ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v7';
-const DB_NAME = 'pokemon-kartenalbum-v7';
+const ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v8';
+const DB_NAME = 'pokemon-kartenalbum-v8';
 const DB_VERSION = 1;
 const OWNED_STORE = 'owned';
-const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v7';
+const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v8';
 const REQUEST_TIMEOUT_MS = 15000;
 
 const state = {
@@ -411,9 +411,45 @@ function renderCardDetail(detail) {
 }
 
 function renderCardVariants(card) {
-  if(!el.detailVariants)return; const variants=variantsForCard(card); if(!variants.length){el.detailVariants.innerHTML='';return;}
-  el.detailVariants.innerHTML=`<details class="variant-details"><summary>Weitere deutsche Varianten <span>${variants.length}</span></summary><div class="variant-list">${variants.map(v=>{const have=state.owned.has(v.id),sources=variantImageSources(v,card),q=encodeURIComponent(`Pokémon ${v.name} ${v.localId}/086 ${v.label} deutsch`);return `<article class="variant-card"><div class="variant-image-wrap"><img src="${attr(sources[0]||'')}" data-sources='${imageFallbackAttr(sources)}' data-source-index="0" onerror="applyImageFallback(this)" alt="${attr(v.name+' '+v.label)}" loading="lazy"></div><div class="variant-copy"><strong>${escapeHTML(v.label)}</strong><span>${escapeHTML(v.origin)}</span><small>${escapeHTML(v.note)}</small><a href="https://www.ebay.de/sch/i.html?_nkw=${q}" target="_blank" rel="noopener">Angebote suchen</a></div><button type="button" class="variant-own ${have?'is-owned':''}" data-variant-owned="${attr(v.id)}">${have?'Da ✓':'Fehlt'}</button></article>`}).join('')}</div></details>`;
-} 
+  if (!el.detailVariants) return;
+  const variants = variantsForCard(card);
+  if (!variants.length) { el.detailVariants.innerHTML = ''; return; }
+  el.detailVariants.innerHTML = `<details class="variant-details"><summary>Weitere deutsche Varianten <span>${variants.length}</span></summary><div class="variant-list">${variants.map(v => {
+    const have = state.owned.has(v.id), sources = variantImageSources(v, card), q = encodeURIComponent(`Pokémon ${v.name} ${v.localId}/086 ${v.label} deutsch`);
+    return `<article class="variant-card">
+      <button type="button" class="variant-open" data-variant-open="${attr(v.id)}" aria-label="${attr(v.name + ' – ' + v.label)} groß ansehen">
+        <div class="variant-image-wrap"><img src="${attr(sources[0] || '')}" data-sources='${imageFallbackAttr(sources)}' data-source-index="0" onerror="applyImageFallback(this)" alt="${attr(v.name + ' ' + v.label)}" loading="lazy"></div>
+        <span class="variant-enlarge">Groß ansehen</span>
+      </button>
+      <div class="variant-copy"><strong>${escapeHTML(v.label)}</strong><span>${escapeHTML(v.origin)}</span><small>${escapeHTML(v.note)}</small><a href="https://www.ebay.de/sch/i.html?_nkw=${q}" target="_blank" rel="noopener">Angebote suchen</a></div>
+      <button type="button" class="variant-own ${have ? 'is-owned' : ''}" data-variant-owned="${attr(v.id)}">${have ? 'Da ✓' : 'Fehlt'}</button>
+    </article>`;
+  }).join('')}</div></details>`;
+}
+
+function openVariant(id) {
+  const variant = CARD_VARIANTS.find(item => item.id === id);
+  if (!variant) return;
+  const parentCard = state.cards.find(card => card.setKind === variant.setKind && localNumber(card) === variant.localId);
+  const sources = variantImageSources(variant, parentCard);
+  state.activeCardId = variant.id;
+  el.detailName.textContent = variant.name;
+  el.detailSet.textContent = `${setLabel(variant.setKind)} · Deutsche Variante`;
+  el.detailNumber.textContent = `${variant.localId}/086`;
+  el.detailImage.dataset.sources = JSON.stringify(sources);
+  el.detailImage.dataset.sourceIndex = '0';
+  el.detailImage.onerror = () => applyImageFallback(el.detailImage);
+  el.detailImage.src = sources[0] || '';
+  el.detailImage.alt = `${variant.name} – ${variant.label}`;
+  el.detailImageWrap.classList.remove('zoomed');
+  el.detailMeta.innerHTML = `<div class="meta-item"><span>Variante</span><strong>${escapeHTML(variant.label)}</strong></div><div class="meta-item"><span>Herkunft</span><strong>${escapeHTML(variant.origin)}</strong></div>`;
+  el.detailDescription.innerHTML = `<h3>Deutsche Sondervariante</h3><p>${escapeHTML(variant.note)}</p><p class="variant-parent-note">Sie gehört zur regulären Setkarte ${escapeHTML(variant.name)} ${escapeHTML(variant.localId)}/086.</p>`;
+  el.detailVariants.innerHTML = '';
+  updateDetailOwnedButton();
+  if (!el.cardDialog.open) el.cardDialog.showModal();
+  el.cardDialog.scrollTop = 0;
+}
+
 function updateDetailOwnedButton() {
   const owned = state.owned.has(state.activeCardId);
   el.detailOwnedButton.setAttribute('aria-pressed', String(owned));
@@ -531,7 +567,12 @@ el.gallery.addEventListener('click', event => {
   if (open) openCard(open.dataset.cardId);
 });
 
-if (el.extrasCards) el.extrasCards.addEventListener('click', event => { const b=event.target.closest('[data-extra-owned]'); if(b) toggleOwned(b.dataset.extraOwned); });
+if (el.extrasCards) el.extrasCards.addEventListener('click', event => {
+  const owned = event.target.closest('[data-extra-owned]');
+  if (owned) { toggleOwned(owned.dataset.extraOwned); return; }
+  const open = event.target.closest('[data-extra-open]');
+  if (open) openExtra(open.dataset.extraOpen);
+});
 if (el.findCards) el.findCards.addEventListener('click', event => {
   const toggle = event.target.closest('[data-toggle-owned]');
   if (toggle) { toggleOwned(toggle.dataset.toggleOwned); return; }
@@ -543,6 +584,14 @@ el.checklist.addEventListener('click', event => {
   const button = event.target.closest('[data-check-id]');
   if (button) toggleOwned(button.dataset.checkId);
 });
+
+if (el.detailVariants) el.detailVariants.addEventListener('click', event => {
+  const owned = event.target.closest('[data-variant-owned]');
+  if (owned) { toggleOwned(owned.dataset.variantOwned); return; }
+  const open = event.target.closest('[data-variant-open]');
+  if (open) openVariant(open.dataset.variantOpen);
+});
+
 el.detailOwnedButton.addEventListener('click', () => state.activeCardId && toggleOwned(state.activeCardId));
 el.closeDialog.addEventListener('click', () => el.cardDialog.close());
 el.cardDialog.addEventListener('close', () => { state.activeCardId = null; el.detailImageWrap.classList.remove('zoomed'); });
