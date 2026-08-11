@@ -105,3 +105,13 @@ Die Preisversorgung läuft nicht mehr direkt vom iPhone zu Cardmarket.
 - Die GitHub-Aktualisierung verursacht keinen Datenverkehr auf dem iPhone.
 - Bereits lokal gespeicherte Preise bleiben erhalten, wenn ein späterer Download fehlschlägt.
 - Der Workflow kann zusätzlich in GitHub unter Actions > Update Cardmarket prices > Run workflow manuell gestartet werden.
+
+
+## Version 14
+
+Preis-Zuordnung korrigiert:
+- Der Cardmarket-Produktkatalog liefert für Singles primär `idExpansion`, nicht bequem den ausgeschriebenen Setnamen.
+- Der GitHub-Generator erkennt deshalb die passende Cardmarket-Erweiterung anhand der vollständigen englischen Kartenliste des jeweiligen TCGdex-Sets.
+- Innerhalb der erkannten Erweiterung werden Karten nach englischem Namen und bei Namensduplikaten deterministisch nach Kartennummer / Produkt-ID gepaart.
+- Der Workflow schreibt Diagnosewerte (`idExpansion`, Kartenanzahl, Namensüberlappung, zugeordnete Preise) in `pokemon-prices.json`.
+- Die App zeigt jetzt auch an, wie viele Preise lokal gespeichert wurden.

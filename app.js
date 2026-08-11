@@ -38,14 +38,14 @@ const CARD_VARIANTS = [
 const STORAGE_KEY = 'pokemon-black-white-owned-v1';
 const DETAIL_CACHE_KEY = 'pokemon-black-white-detail-cache-v1';
 const LEGACY_ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v9';
-const DB_NAME = 'pokemon-kartenalbum-v13';
+const DB_NAME = 'pokemon-kartenalbum-v14';
 const DB_VERSION = 1;
 const OWNED_STORE = 'owned';
-const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v13';
+const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v14';
 const REQUEST_TIMEOUT_MS = 15000;
 const GALLERY_INITIAL_BATCH = 48;
 const GALLERY_NEXT_BATCH = 32;
-const PRICE_STORE_KEY = 'pokemon-cardmarket-prices-v13';
+const PRICE_STORE_KEY = 'pokemon-cardmarket-prices-v14';
 const PRICE_FEED_URL = './data/pokemon-prices.json';
 
 const state = {
@@ -528,7 +528,8 @@ function renderPriceStatus() {
   el.priceStatusBox.dataset.age=days>=7?'old':days>=2?'aging':'fresh';
   el.priceStatusTitle.textContent=`Preisstand: ${date}`;
   const sourceDate=store.sourceDate ? ` · Cardmarket ${store.sourceDate}` : '';
-  el.priceStatusText.textContent=(days===0?'Heute geladen':days===1?'1 Tag alt':`${days} Tage alt`)+` · lokal gespeichert${sourceDate}`;
+  const count=Number(store.matched||0);
+  el.priceStatusText.textContent=(days===0?'Heute geladen':days===1?'1 Tag alt':`${days} Tage alt`)+` · ${count} Preise lokal gespeichert${sourceDate}`;
   el.updatePricesButton.textContent=days>=7?'Preise aktualisieren':'Neu laden';
 }
 function priceKeyForCard(card) {
@@ -564,7 +565,8 @@ async function updateCardmarketPrices() {
       sourceDate:feed.generatedAt ? new Intl.DateTimeFormat('de-DE',{dateStyle:'short'}).format(new Date(feed.generatedAt)) : '',
       byKey:feed.byKey,
       byCardId:{},
-      matched:Object.keys(feed.byKey).length
+      matched:Object.keys(feed.byKey).length,
+      diagnostics:feed.diagnostics || null
     };
     localStorage.setItem(PRICE_STORE_KEY,JSON.stringify(next));
     state.priceStore=next;
