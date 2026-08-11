@@ -57,3 +57,15 @@ Extras: SVP 208–212 sowie die acht Holo-Basisenergien SVE 017–024. Eigener F
 - Cardmarket-Suche verwendet Kartenname + Setcode (BLK/WHT) + Nummer.
 - eBay verwendet bewusst kürzere Suchtexte; zusätzlich kann der eBay-Suchtext kopiert werden, falls die iPhone-eBay-App eine Websuche nicht korrekt übernimmt.
 - Marktlinks stehen auch in der großen Kartenansicht.
+
+
+## Version 10
+
+Die App ist jetzt ein allgemeines Pokémon-Kartenalbum:
+- Der Button **Sets** öffnet einen dynamischen Katalog der deutschen TCGdex-Sets.
+- **Schwarze Blitze & Weiße Flammen** bleibt als besondere gemeinsame Kollektion mit Extras und Varianten erhalten.
+- Einzelne andere Sets können direkt geöffnet und gesammelt werden.
+- Besitzstände sind global und bleiben beim Wechsel zwischen Sets erhalten.
+- Karten und Bilder werden weiterhin erst für die gewählte Kollektion geladen.
+- Offline-Speicherung gilt jeweils für die aktuell geöffnete Kollektion.
+- Neue Sets können im Katalog erscheinen, ohne dass die App für jedes Set neu programmiert werden muss.

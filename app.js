@@ -1,8 +1,17 @@
 const API_ROOT = 'https://api.tcgdex.net/v2/de';
-const SETS = [
-  { id: 'sv10.5b', kind: 'black', label: 'Schwarze Blitze' },
-  { id: 'sv10.5w', kind: 'white', label: 'Weiße Flammen' },
-];
+const DEFAULT_COLLECTION_ID = 'black-white-flare';
+const COLLECTION_KEY = 'pokemon-active-collection-v1';
+const SPECIAL_COLLECTION = {
+  id: DEFAULT_COLLECTION_ID,
+  name: 'Schwarze Blitze & Weiße Flammen',
+  eyebrow: 'Karmesin & Purpur',
+  special: true,
+  sets: [
+    { id: 'sv10.5b', kind: 'black', label: 'Schwarze Blitze' },
+    { id: 'sv10.5w', kind: 'white', label: 'Weiße Flammen' },
+  ],
+};
+let SETS = SPECIAL_COLLECTION.sets.slice();
 const EXTRA_CARDS = [
   {id:'extra-svp-208',apiId:'svp-208',code:'SVP 208',name:'Victini',kind:'promo',group:'Schwarze Blitze',note:'Unova Victini Illustration Collection',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVP/SVP_208_R_DE_LG.png','https://assets.tcgdex.net/de/sv/svp/208/high.webp','https://assets.tcgdex.net/en/sv/svp/208/high.webp']},
   {id:'extra-svp-209',apiId:'svp-209',code:'SVP 209',name:'Voltolos',kind:'promo',group:'Schwarze Blitze',note:'Schwarze Blitze Elite-Trainer-Box',images:['https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVP/SVP_209_R_DE_LG.png','https://assets.tcgdex.net/de/sv/svp/209/high.webp','https://assets.tcgdex.net/en/sv/svp/209/high.webp']},
@@ -28,16 +37,18 @@ const CARD_VARIANTS = [
 
 const STORAGE_KEY = 'pokemon-black-white-owned-v1';
 const DETAIL_CACHE_KEY = 'pokemon-black-white-detail-cache-v1';
-const ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v9';
-const DB_NAME = 'pokemon-kartenalbum-v9';
+const LEGACY_ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v9';
+const DB_NAME = 'pokemon-kartenalbum-v10';
 const DB_VERSION = 1;
 const OWNED_STORE = 'owned';
-const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v9';
+const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v10';
 const REQUEST_TIMEOUT_MS = 15000;
 
 const state = {
   cards: [],
   sets: [],
+  collection: SPECIAL_COLLECTION,
+  catalog: [],
   owned: new Set(readJSON(STORAGE_KEY, [])),
   db: null,
   detailCache: readJSON(DETAIL_CACHE_KEY, {}),
@@ -50,10 +61,10 @@ const state = {
 
 const ids = [
   'statusPanel','statusText','gallery','emptyGallery','checklist','emptyChecklist','extrasCards','extrasSummary','findCards','emptyFind','searchInput','clearSearch',
-  'ownedCount','totalCount','blackProgress','whiteProgress','progressRing','progressPercent','progressMessage','progressHero',
+  'ownedCount','totalCount','progressSetList','progressRing','progressPercent','progressMessage','progressHero','collectionEyebrow','collectionTitle',
   'allTabCount','ownedTabCount','missingTabCount','resultCount','cardDialog','closeDialog','detailImage','detailImageWrap',
   'detailSet','detailName','detailNumber','detailMeta','detailDescription','detailVariants','detailMarket','detailOwnedButton','detailOwnedText','statsButton',
-  'statsDialog','closeStats','statsContent','exportButton','importInput','setsShortcut','offlineButton','offlineStatus','storageStatus'
+  'statsDialog','closeStats','statsContent','exportButton','importInput','setsShortcut','offlineButton','offlineStatus','storageStatus','setsDialog','closeSets','setsCatalog','setsSearchInput','setsCatalogStatus'
 ];
 const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
@@ -132,6 +143,55 @@ function writeJSON(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); }
   catch (error) { console.warn('Lokaler Speicher nicht verfügbar:', error); }
 }
+
+function collectionCacheKey(collection = state.collection) {
+  return `pokemon-album-cache-v10:${collection.id}`;
+}
+function activeExtras() { return state.collection?.special ? EXTRA_CARDS : []; }
+function activeVariants() { return state.collection?.special ? CARD_VARIANTS : []; }
+function collectionSetSpecs() { return state.collection?.sets || []; }
+function setSpecForKind(kind) { return collectionSetSpecs().find(s => s.kind === kind); }
+function setLabel(kind) { return setSpecForKind(kind)?.label || state.collection?.name || 'Pokémon Set'; }
+function setCodeForCard(card) {
+  if (card.setKind === 'black') return 'BLK';
+  if (card.setKind === 'white') return 'WHT';
+  return card.setId || '';
+}
+function makeGenericCollection(setBrief) {
+  return {
+    id: `set:${setBrief.id}`,
+    name: setBrief.name || setBrief.id,
+    eyebrow: 'Pokémon Sammelkartenspiel',
+    special: false,
+    sets: [{ id: setBrief.id, kind: 'single', label: setBrief.name || setBrief.id }],
+    logo: setBrief.logo || '',
+    cardCount: setBrief.cardCount || null,
+  };
+}
+function restoreCollectionSelection() {
+  const saved = readJSON(COLLECTION_KEY, null);
+  if (!saved || saved.id === DEFAULT_COLLECTION_ID) return SPECIAL_COLLECTION;
+  if (saved.setId) return makeGenericCollection({ id: saved.setId, name: saved.name, logo: saved.logo, cardCount: saved.cardCount });
+  return SPECIAL_COLLECTION;
+}
+function persistCollectionSelection() {
+  const c = state.collection;
+  writeJSON(COLLECTION_KEY, c.special ? { id: DEFAULT_COLLECTION_ID } : {
+    id: c.id, setId: c.sets[0].id, name: c.name, logo: c.logo || '', cardCount: c.cardCount || null
+  });
+}
+function naturalSetScore(id='') {
+  const nums = String(id).match(/\d+(?:\.\d+)?/g);
+  const prefix = String(id).replace(/[0-9.]/g,'');
+  const base = ({sv:9000,swsh:8000,sm:7000,xy:6000,bw:5000,dp:4000,ex:3000,base:1000}[prefix] || 2000);
+  return base + (nums ? nums.reduce((a,n,i)=>a+Number(n)*Math.pow(100,-i),0) : 0);
+}
+function assetUrl(base, quality='webp') {
+  if (!base) return '';
+  if (/\.(webp|png|jpe?g)$/i.test(base)) return base;
+  return `${base}.${quality}`;
+}
+
 async function writeOwned(changedId = null, owned = null) {
   writeJSON(STORAGE_KEY, [...state.owned]);
   try {
@@ -140,7 +200,6 @@ async function writeOwned(changedId = null, owned = null) {
   } catch (error) { console.warn('Besitzstand konnte nicht in IndexedDB geschrieben werden:', error); }
 }
 function normalized(text = '') { return String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss').toLowerCase(); }
-function setLabel(kind) { return kind === 'black' ? 'Schwarze Blitze' : 'Weiße Flammen'; }
 function imageUrl(base, quality = 'low') {
   if (!base) return '';
   if (/\.(webp|png|jpe?g)$/i.test(base)) return base;
@@ -157,7 +216,7 @@ function applyImageFallback(img) {
   img.onerror=null; img.closest('.extra-image-wrap,.variant-image-wrap')?.classList.add('image-missing');
 }
 function variantKey(card) { return `${card.setKind}:${localNumber(card)}`; }
-function variantsForCard(card) { return CARD_VARIANTS.filter(v => `${v.setKind}:${v.localId}` === variantKey(card)); }
+function variantsForCard(card) { return activeVariants().filter(v => `${v.setKind}:${v.localId}` === variantKey(card)); }
 function variantImageSources(variant, card) {
   const baseLow=imageUrl(card?.image,'low'), baseHigh=imageUrl(card?.image,'high');
   return [baseHigh,baseLow].filter(Boolean);
@@ -173,7 +232,10 @@ function escapeHTML(value = '') {
 }
 function attr(value = '') { return escapeHTML(value); }
 function compareCards(a, b) {
-  if (a.setKind !== b.setKind) return a.setKind === 'black' ? -1 : 1;
+  if (a.setKind !== b.setKind) {
+    const order = collectionSetSpecs().map(s => s.kind);
+    return order.indexOf(a.setKind) - order.indexOf(b.setKind);
+  }
   return numberValue(a) - numberValue(b) || String(a.name).localeCompare(String(b.name), 'de');
 }
 
@@ -198,8 +260,8 @@ async function apiGet(path) {
 
 function normalizeSet(raw, expected) {
   const set = raw?.data ?? raw;
-  if (!set || !Array.isArray(set.cards)) throw new Error(`${expected.label} enthält keine lesbare Kartenliste.`);
-  const official = set.cardCount?.official ?? 86;
+  if (!set || !Array.isArray(set.cards)) throw new Error(`${expected.label || expected.id} enthält keine lesbare Kartenliste.`);
+  const official = set.cardCount?.official ?? set.cardCount?.total ?? 0;
   return {
     ...set,
     id: expected.id,
@@ -239,30 +301,54 @@ function showError(message) {
 }
 
 async function loadData() {
-  const cached = readJSON(ALBUM_CACHE_KEY, null);
+  SETS = collectionSetSpecs().slice();
+  state.setFilter = 'all';
+  renderCollectionChrome();
+
+  const key = collectionCacheKey();
+  let cached = readJSON(key, null);
+  if (!cached && state.collection.special) cached = readJSON(LEGACY_ALBUM_CACHE_KEY, null);
   const hadCache = useAlbumData(cached);
-  if (hadCache) {
-    el.statusPanel.hidden = true;
-  } else {
-    showLoading('Die beiden Editionen werden direkt geladen. Beim ersten Start kann das einen Moment dauern.');
-  }
+  if (hadCache) el.statusPanel.hidden = true;
+  else showLoading(state.collection.special ? 'Die beiden Editionen werden geladen.' : `${state.collection.name} wird geladen.`);
 
   try {
     const rawSets = await Promise.all(SETS.map(set => apiGet(`/sets/${encodeURIComponent(set.id)}`)));
     const fullSets = rawSets.map((raw, index) => normalizeSet(raw, SETS[index]));
     const cards = fullSets.flatMap(set => set.cards).sort(compareCards);
     if (!cards.length) throw new Error('Es wurden keine Karten geliefert.');
-
     state.sets = fullSets;
     state.cards = cards;
-    writeJSON(ALBUM_CACHE_KEY, { savedAt: Date.now(), sets: fullSets, cards });
+    writeJSON(key, { savedAt: Date.now(), sets: fullSets, cards });
     el.statusPanel.hidden = true;
     renderAll();
   } catch (error) {
     console.error('Karten konnten nicht geladen werden:', error);
-    if (!hadCache) {
-      showError(`Karten konnten nicht geladen werden. ${error.message} Bitte die Seite einmal neu laden.`);
-    }
+    if (!hadCache) showError(`Karten konnten nicht geladen werden. ${error.message} Bitte die Seite einmal neu laden.`);
+  }
+}
+
+function renderCollectionChrome() {
+  if (el.collectionEyebrow) el.collectionEyebrow.textContent = state.collection.eyebrow || 'Pokémon Sammelkartenspiel';
+  if (el.collectionTitle) el.collectionTitle.textContent = state.collection.name;
+  document.title = `${state.collection.name} · Pokémon Kartenalbum`;
+
+  const filter = document.getElementById('setFilter');
+  const specs = collectionSetSpecs();
+  if (specs.length <= 1) {
+    filter.hidden = true;
+    filter.innerHTML = '';
+  } else {
+    filter.hidden = false;
+    filter.innerHTML = `<button type="button" data-set="all" class="active"><span>Alle</span></button>` +
+      specs.map(s => `<button type="button" data-set="${attr(s.kind)}"><span>${escapeHTML(s.label)}</span></button>`).join('');
+  }
+
+  const extrasNav = document.querySelector('.bottom-nav button[data-view="extrasView"]');
+  if (extrasNav) extrasNav.hidden = !state.collection.special;
+  document.querySelector('.bottom-nav')?.classList.toggle('no-extras', !state.collection.special);
+  if (!state.collection.special && document.getElementById('extrasView')?.classList.contains('active')) {
+    switchView('galleryView');
   }
 }
 
@@ -301,10 +387,12 @@ function renderCounts() {
   el.progressRing.style.setProperty('--progress', `${pct * 3.6}deg`);
   el.progressMessage.textContent = pct === 100 ? 'Sammlung vollständig.' : pct >= 75 ? 'Fast geschafft.' : pct > 0 ? 'Die Sammlung wächst.' : 'Viel Spaß beim Sammeln!';
 
-  for (const kind of ['black', 'white']) {
-    const cards = state.cards.filter(card => card.setKind === kind);
-    const have = cards.filter(card => state.owned.has(card.id)).length;
-    el[kind === 'black' ? 'blackProgress' : 'whiteProgress'].textContent = `${have} / ${cards.length}`;
+  if (el.progressSetList) {
+    el.progressSetList.innerHTML = collectionSetSpecs().map(spec => {
+      const cards = state.cards.filter(card => card.setKind === spec.kind);
+      const have = cards.filter(card => state.owned.has(card.id)).length;
+      return `<div><span class="set-dot ${attr(spec.kind)}"></span><span>${escapeHTML(spec.label)}</span><strong>${have} / ${cards.length}</strong></div>`;
+    }).join('');
   }
   const counts = ownershipCounts();
   el.allTabCount.textContent = counts.all;
@@ -323,7 +411,7 @@ function renderGallery() {
         <span class="card-image-shell"><img loading="lazy" decoding="async" src="${attr(imageUrl(card.image, 'low'))}" alt="${attr(card.name)}"></span>
         <span class="card-caption">
           <span class="card-title">${escapeHTML(card.name)}</span>
-          <span class="card-meta"><span><i class="set-dot ${card.setKind}"></i>${escapeHTML(localNumber(card))}/${String(card.setOfficialCount || 86).padStart(3,'0')}</span><span>${escapeHTML(card.rarity || '')}</span></span>
+          <span class="card-meta"><span><i class="set-dot ${card.setKind}"></i>${escapeHTML(localNumber(card))}${card.setOfficialCount ? '/' + String(card.setOfficialCount).padStart(3,'0') : ''}</span><span>${escapeHTML(card.rarity || '')}</span></span>
         </span>
       </button>
       <button class="card-status" type="button" data-toggle-owned="${attr(card.id)}" aria-pressed="${owned}" aria-label="${owned ? 'Als fehlend markieren' : 'Als gesammelt markieren'}"><span class="mini-check"></span><span>${owned ? 'Da' : 'Fehlt'}</span></button>
@@ -334,15 +422,15 @@ function renderGallery() {
 function renderChecklist() {
   const cards = filteredCards();
   el.emptyChecklist.hidden = cards.length > 0;
-  el.checklist.innerHTML = ['black', 'white'].map(kind => ({ kind, cards: cards.filter(card => card.setKind === kind) }))
+  el.checklist.innerHTML = collectionSetSpecs().map(spec => ({ kind: spec.kind, label: spec.label, cards: cards.filter(card => card.setKind === spec.kind) }))
     .filter(group => group.cards.length)
     .map(group => `<section class="check-group">
-      <h3 class="check-group-title"><i class="set-dot ${group.kind}"></i>${setLabel(group.kind)}</h3>
+      <h3 class="check-group-title"><i class="set-dot ${attr(group.kind)}"></i>${escapeHTML(group.label)}</h3>
       <div class="checklist">${group.cards.map(card => {
         const owned = state.owned.has(card.id);
-        const denom = String(card.setOfficialCount || 86).padStart(3, '0');
+        const denom = String(card.setOfficialCount || '').padStart(3, '0');
         return `<button class="check-row ${owned ? 'owned' : ''}" type="button" data-check-id="${attr(card.id)}" aria-pressed="${owned}">
-          <span class="check-box"></span><span class="check-number">${escapeHTML(localNumber(card))}/${denom}</span><span class="check-name">${escapeHTML(card.name)}</span><span class="check-rarity">${escapeHTML(card.rarity || '')}</span>
+          <span class="check-box"></span><span class="check-number">${escapeHTML(localNumber(card))}${denom ? '/' + denom : ''}</span><span class="check-name">${escapeHTML(card.name)}</span><span class="check-rarity">${escapeHTML(card.rarity || '')}</span>
         </button>`;
       }).join('')}</div>
     </section>`).join('');
@@ -357,7 +445,6 @@ function toggleOwned(id, force) {
 }
 
 
-function setCodeForCard(card) { return card.setKind === 'black' ? 'BLK' : 'WHT'; }
 function ebaySearchText(item) {
   if (item.marketType === 'extra') return `Pokemon ${item.name} ${item.code}`;
   if (item.marketType === 'variant') return `Pokemon ${item.name} ${item.localId} ${item.label}`;
@@ -383,9 +470,9 @@ async function copyEbaySearch(item) {
 function marketDescriptorForActive() {
   const card = state.cards.find(x => x.id === state.activeCardId);
   if (card) return {...card, marketType:'card'};
-  const extra = EXTRA_CARDS.find(x => x.id === state.activeCardId);
+  const extra = activeExtras().find(x => x.id === state.activeCardId);
   if (extra) return {...extra, marketType:'extra'};
-  const variant = CARD_VARIANTS.find(x => x.id === state.activeCardId);
+  const variant = activeVariants().find(x => x.id === state.activeCardId);
   if (variant) return {...variant, marketType:'variant'};
   return null;
 }
@@ -402,7 +489,7 @@ async function openCard(id) {
   state.activeCardId = id;
   el.detailName.textContent = card.name;
   el.detailSet.textContent = setLabel(card.setKind);
-  el.detailNumber.textContent = `${localNumber(card)}/${String(card.setOfficialCount || 86).padStart(3,'0')}`;
+  el.detailNumber.textContent = `${localNumber(card)}${card.setOfficialCount ? '/' + String(card.setOfficialCount).padStart(3,'0') : ''}`;
   el.detailImage.onerror=null; el.detailImage.removeAttribute('data-sources'); el.detailImage.src = imageUrl(card.image, 'high');
   el.detailImage.alt = card.name;
   el.detailImageWrap.classList.remove('zoomed');
@@ -470,14 +557,14 @@ function renderCardVariants(card) {
 }
 
 function openVariant(id) {
-  const variant = CARD_VARIANTS.find(item => item.id === id);
+  const variant = activeVariants().find(item => item.id === id);
   if (!variant) return;
   const parentCard = state.cards.find(card => card.setKind === variant.setKind && localNumber(card) === variant.localId);
   const sources = variantImageSources(variant, parentCard);
   state.activeCardId = variant.id;
   el.detailName.textContent = variant.name;
   el.detailSet.textContent = `${setLabel(variant.setKind)} · Deutsche Variante`;
-  el.detailNumber.textContent = `${variant.localId}/086`;
+  el.detailNumber.textContent = `${variant.localId}/${String(parentCard?.setOfficialCount || 86).padStart(3,'0')}`;
   el.detailImage.dataset.sources = JSON.stringify(sources);
   el.detailImage.dataset.sourceIndex = '0';
   el.detailImage.onerror = () => applyImageFallback(el.detailImage);
@@ -485,7 +572,7 @@ function openVariant(id) {
   el.detailImage.alt = `${variant.name} – ${variant.label}`;
   el.detailImageWrap.classList.remove('zoomed');
   el.detailMeta.innerHTML = `<div class="meta-item"><span>Variante</span><strong>${escapeHTML(variant.label)}</strong></div><div class="meta-item"><span>Herkunft</span><strong>${escapeHTML(variant.origin)}</strong></div>`;
-  el.detailDescription.innerHTML = `<h3>Deutsche Sondervariante</h3><p>${escapeHTML(variant.note)}</p><p class="variant-parent-note">Sie gehört zur regulären Setkarte ${escapeHTML(variant.name)} ${escapeHTML(variant.localId)}/086.</p>`;
+  el.detailDescription.innerHTML = `<h3>Deutsche Sondervariante</h3><p>${escapeHTML(variant.note)}</p><p class="variant-parent-note">Sie gehört zur regulären Setkarte ${escapeHTML(variant.name)} ${escapeHTML(variant.localId)}/${String(parentCard?.setOfficialCount || 86).padStart(3,'0')}.</p>`;
   el.detailVariants.innerHTML = '';
   renderDetailMarket({...variant, marketType:'variant'});
   updateDetailOwnedButton();
@@ -503,7 +590,7 @@ function updateDetailOwnedButton() {
 
 function extraImageSources(extra) { return (extra.images || []).filter(Boolean); }
 async function openExtra(id) {
-  const extra=EXTRA_CARDS.find(x=>x.id===id); if(!extra)return;
+  const extra=activeExtras().find(x=>x.id===id); if(!extra)return;
   state.activeCardId=id;
   el.detailName.textContent=extra.name;
   el.detailSet.textContent=extra.kind==='promo' ? 'Deutsche Promo' : 'Holo-Basisenergie';
@@ -526,9 +613,9 @@ function renderExtraDetail(extra,detail){
   el.detailDescription.innerHTML=parts.join('')||`<p>${escapeHTML(extra.note||'Deutsche Zusatzkarte zu Schwarze Blitze / Weiße Flammen.')}</p>`;
 }
 function renderExtras() {
- if(!el.extrasCards)return; const owned=EXTRA_CARDS.filter(x=>state.owned.has(x.id)).length;
+ if(!el.extrasCards)return; const extras=activeExtras(); const owned=extras.filter(x=>state.owned.has(x.id)).length;
  el.extrasSummary.innerHTML=`<strong>${owned} von ${EXTRA_CARDS.length}</strong><span>deutsche Extras gesammelt</span>`;
- const groups=[['Promos – Schwarze Blitze',EXTRA_CARDS.filter(x=>x.kind==='promo'&&x.group==='Schwarze Blitze')],['Promos – Weiße Flammen',EXTRA_CARDS.filter(x=>x.kind==='promo'&&x.group==='Weiße Flammen')],['Holo-Basisenergien – beide Editionen',EXTRA_CARDS.filter(x=>x.kind==='energy')]];
+ const groups=[['Promos – Schwarze Blitze',extras.filter(x=>x.kind==='promo'&&x.group==='Schwarze Blitze')],['Promos – Weiße Flammen',extras.filter(x=>x.kind==='promo'&&x.group==='Weiße Flammen')],['Holo-Basisenergien – beide Editionen',extras.filter(x=>x.kind==='energy')]];
  el.extrasCards.innerHTML=groups.map(([title,cards])=>`<section class="extra-group"><h3>${escapeHTML(title)}</h3><div class="extra-grid">${cards.map(x=>{const have=state.owned.has(x.id),q=encodeURIComponent(`Pokémon ${x.name} ${x.code} deutsch`),cm=encodeURIComponent(`${x.name} ${x.code}`),sources=extraImageSources(x);return `<article class="extra-card ${have?'owned':''}"><button class="extra-open" type="button" data-extra-open="${attr(x.id)}"><div class="extra-image-wrap"><img src="${attr(sources[0]||'')}" data-sources='${imageFallbackAttr(sources)}' data-source-index="0" alt="${attr(x.name)}" loading="lazy" onerror="applyImageFallback(this)"><span>${escapeHTML(x.code)}</span></div><div class="extra-meta"><strong>${escapeHTML(x.name)}</strong><b>${escapeHTML(x.code)}</b>${x.note?`<small>${escapeHTML(x.note)}</small>`:''}</div></button><button class="extra-own ${have?'is-owned':''}" data-extra-owned="${attr(x.id)}">${have?'Da ✓':'Fehlt'}</button><div class="extra-market"><a href="${attr(cardmarketSearchUrl({...x,marketType:'extra'}))}" target="_blank" rel="noopener">Cardmarket</a><a href="${attr(ebaySearchUrl({...x,marketType:'extra'}))}" target="_blank" rel="noopener">eBay</a><button type="button" data-copy-ebay-extra="${attr(x.id)}">Kopieren</button></div></article>`}).join('')}</div></section>`).join('');
 }
 
@@ -545,14 +632,14 @@ function marketImage(item) {
   return variantImageSources(item,parent)[0] || '';
 }
 function marketSubtitle(item) {
-  if (item.marketType === 'card') return `${setCodeForCard(item)} ${localNumber(item)}`;
+  if (item.marketType === 'card') return `${setCodeForCard(item)} ${localNumber(item)}`.trim();
   if (item.marketType === 'extra') return item.code;
   return `${setCodeForCard({setKind:item.setKind})} ${item.localId} · ${item.label}`;
 }
 function allMarketItems() {
   const cards=state.cards.map(card=>({...card,marketType:'card'}));
-  const extras=EXTRA_CARDS.map(extra=>({...extra,marketType:'extra'}));
-  const variants=CARD_VARIANTS.map(v=>({...v,marketType:'variant'}));
+  const extras=activeExtras().map(extra=>({...extra,marketType:'extra'}));
+  const variants=activeVariants().map(v=>({...v,marketType:'variant'}));
   return [...cards,...extras,...variants];
 }
 function renderFindCards() {
@@ -564,7 +651,7 @@ function renderFindCards() {
   const q=normalized(state.search.trim());
   if(q) items=items.filter(item=>normalized(`${item.name} ${marketSubtitle(item)} ${item.label||''} ${item.note||''} ${item.rarity||''}`).includes(q));
   items.sort((a,b)=>{
-    const ka=marketSetKind(a),kb=marketSetKind(b); if(ka!==kb)return ({black:0,white:1,both:2}[ka]??3)-({black:0,white:1,both:2}[kb]??3);
+    const ka=marketSetKind(a),kb=marketSetKind(b); if(ka!==kb){const order=collectionSetSpecs().map(s=>s.kind);return (order.indexOf(ka)<0?99:order.indexOf(ka))-(order.indexOf(kb)<0?99:order.indexOf(kb));}
     const na=parseInt(String(a.localId||a.code||'999').replace(/\D/g,''),10)||9999, nb=parseInt(String(b.localId||b.code||'999').replace(/\D/g,''),10)||9999; return na-nb || String(a.name).localeCompare(String(b.name),'de');
   });
   el.emptyFind.hidden=items.length!==0;
@@ -578,18 +665,13 @@ function renderFindCards() {
 
 function renderStats() {
   if (!state.cards.length) { el.statsContent.innerHTML = ''; return; }
-  const groups = [
-    ['Gesamt', state.cards],
-    ['Schwarze Blitze', state.cards.filter(card => card.setKind === 'black')],
-    ['Weiße Flammen', state.cards.filter(card => card.setKind === 'white')],
-  ];
+  const groups = [['Gesamt', state.cards], ...collectionSetSpecs().map(spec => [spec.label, state.cards.filter(card => card.setKind === spec.kind)])];
   el.statsContent.innerHTML = groups.map(([label, cards]) => {
     const have = cards.filter(card => state.owned.has(card.id)).length;
     const pct = cards.length ? Math.round(have / cards.length * 100) : 0;
     return `<div class="stats-progress"><div class="stats-progress-top"><span>${escapeHTML(label)}</span><span>${have} / ${cards.length}</span></div><div class="progress-track"><span style="width:${pct}%"></span></div><div class="progress-note">${pct}% vollständig · ${cards.length - have} fehlen noch</div></div>`;
   }).join('');
 }
-
 function setActiveButtons(container, selector, value, attrName) {
   container.querySelectorAll(selector).forEach(button => button.classList.toggle('active', button.dataset[attrName] === value));
 }
@@ -627,7 +709,7 @@ el.gallery.addEventListener('click', event => {
 if (el.extrasCards) el.extrasCards.addEventListener('click', event => {
   const owned = event.target.closest('[data-extra-owned]');
   if (owned) { toggleOwned(owned.dataset.extraOwned); return; }
-  const copy=event.target.closest('[data-copy-ebay-extra]'); if(copy){const x=EXTRA_CARDS.find(i=>i.id===copy.dataset.copyEbayExtra);if(x)copyEbaySearch({...x,marketType:'extra'});return;}
+  const copy=event.target.closest('[data-copy-ebay-extra]'); if(copy){const x=activeExtras().find(i=>i.id===copy.dataset.copyEbayExtra);if(x)copyEbaySearch({...x,marketType:'extra'});return;}
   const open = event.target.closest('[data-extra-open]');
   if (open) openExtra(open.dataset.extraOpen);
 });
@@ -635,7 +717,7 @@ if (el.findCards) el.findCards.addEventListener('click', event => {
   const card=event.target.closest('[data-market-open-card]'); if(card){openCard(card.dataset.marketOpenCard);return;}
   const extra=event.target.closest('[data-market-open-extra]'); if(extra){openExtra(extra.dataset.marketOpenExtra);return;}
   const variant=event.target.closest('[data-market-open-variant]'); if(variant){openVariant(variant.dataset.marketOpenVariant);return;}
-  const copy=event.target.closest('[data-market-copy]'); if(copy){const [type,id]=copy.dataset.marketCopy.split(':'); const item=type==='card'?state.cards.find(x=>x.id===id):type==='extra'?EXTRA_CARDS.find(x=>x.id===id):CARD_VARIANTS.find(x=>x.id===id); if(item)copyEbaySearch({...item,marketType:type});}
+  const copy=event.target.closest('[data-market-copy]'); if(copy){const [type,id]=copy.dataset.marketCopy.split(':'); const item=type==='card'?state.cards.find(x=>x.id===id):type==='extra'?activeExtras().find(x=>x.id===id):activeVariants().find(x=>x.id===id); if(item)copyEbaySearch({...item,marketType:type});}
 });
 
 el.checklist.addEventListener('click', event => {
@@ -646,7 +728,7 @@ el.checklist.addEventListener('click', event => {
 if (el.detailVariants) el.detailVariants.addEventListener('click', event => {
   const owned = event.target.closest('[data-variant-owned]');
   if (owned) { toggleOwned(owned.dataset.variantOwned); return; }
-  const copy=event.target.closest('[data-copy-ebay-variant]'); if(copy){const v=CARD_VARIANTS.find(i=>i.id===copy.dataset.copyEbayVariant);if(v)copyEbaySearch({...v,marketType:'variant'});return;}
+  const copy=event.target.closest('[data-copy-ebay-variant]'); if(copy){const v=activeVariants().find(i=>i.id===copy.dataset.copyEbayVariant);if(v)copyEbaySearch({...v,marketType:'variant'});return;}
   const open = event.target.closest('[data-variant-open]');
   if (open) openVariant(open.dataset.variantOpen);
 });
@@ -663,13 +745,99 @@ el.detailImageWrap.addEventListener('click', () => {
 });
 for (const trigger of [el.statsButton, el.progressHero]) trigger.addEventListener('click', () => { renderStats(); el.statsDialog.showModal(); });
 el.closeStats.addEventListener('click', () => el.statsDialog.close());
-el.setsShortcut.addEventListener('click', () => document.getElementById('setFilter').scrollIntoView({ behavior: 'smooth', block: 'center' }));
+el.setsShortcut.addEventListener('click', () => openSetsDialog());
+el.closeSets?.addEventListener('click', () => el.setsDialog.close());
+function switchView(viewId) {
+  document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === viewId));
+  document.querySelectorAll('.bottom-nav button').forEach(item => item.classList.toggle('active', item.dataset.view === viewId));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 document.querySelector('.bottom-nav').addEventListener('click', event => {
   const button = event.target.closest('button[data-view]');
+  if (!button || button.hidden) return;
+  switchView(button.dataset.view);
+});
+
+
+async function loadSetsCatalog(force=false) {
+  if (state.catalog.length && !force) { renderSetsCatalog(); return; }
+  el.setsCatalogStatus.textContent = 'Set-Katalog wird geladen …';
+  try {
+    const raw = await apiGet('/sets');
+    const list = Array.isArray(raw) ? raw : (raw?.data || []);
+    state.catalog = list.filter(x => x?.id && x?.name).sort((a,b) => naturalSetScore(b.id)-naturalSetScore(a.id) || String(a.name).localeCompare(String(b.name),'de'));
+    writeJSON('pokemon-set-catalog-v10', {savedAt:Date.now(), sets:state.catalog});
+    el.setsCatalogStatus.textContent = `${state.catalog.length} Sets verfügbar`;
+    renderSetsCatalog();
+  } catch (error) {
+    const cached = readJSON('pokemon-set-catalog-v10', null);
+    if (cached?.sets?.length) {
+      state.catalog = cached.sets;
+      el.setsCatalogStatus.textContent = 'Gespeicherter Set-Katalog';
+      renderSetsCatalog();
+    } else {
+      el.setsCatalogStatus.textContent = `Set-Katalog konnte nicht geladen werden: ${error.message}`;
+    }
+  }
+}
+function collectionOwnedCount(setId) {
+  if (setId === DEFAULT_COLLECTION_ID) return state.owned.size ? SPECIAL_COLLECTION.sets.reduce((sum,s)=>sum + [...state.owned].filter(id=>String(id).startsWith(s.id)).length,0) : 0;
+  return [...state.owned].filter(id => String(id).startsWith(setId)).length;
+}
+function renderSetsCatalog() {
+  const q = normalized(el.setsSearchInput?.value || '');
+  const specialMatch = !q || normalized(`${SPECIAL_COLLECTION.name} ${SPECIAL_COLLECTION.eyebrow}`).includes(q);
+  const sets = state.catalog.filter(s => !q || normalized(`${s.name} ${s.id}`).includes(q));
+  const specialCard = specialMatch ? `<button class="collection-choice featured ${state.collection.id===DEFAULT_COLLECTION_ID?'active':''}" type="button" data-collection-special>
+    <div class="collection-logo pair-logo"><span>BLK</span><span>WHT</span></div>
+    <div class="collection-choice-copy"><strong>${escapeHTML(SPECIAL_COLLECTION.name)}</strong><span>${escapeHTML(SPECIAL_COLLECTION.eyebrow)} · 2 parallele Sets</span><small>${state.collection.id===DEFAULT_COLLECTION_ID?'Aktuell geöffnet':'Deine bisherige Kollektion'}</small></div>
+    <span class="collection-arrow">›</span>
+  </button>` : '';
+  const setCards = sets.map(s => {
+    const total=s.cardCount?.total ?? s.cardCount?.official ?? '';
+    const logo=s.logo ? assetUrl(s.logo,'webp') : '';
+    const isActive=state.collection.id===`set:${s.id}`;
+    return `<button class="collection-choice ${isActive?'active':''}" type="button" data-collection-set="${attr(s.id)}">
+      <div class="collection-logo">${logo?`<img src="${attr(logo)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">`:''}<span style="${logo?'display:none':''}">${escapeHTML(s.id.toUpperCase())}</span></div>
+      <div class="collection-choice-copy"><strong>${escapeHTML(s.name)}</strong><span>${escapeHTML(s.id)}${total?` · ${total} Karten`:''}</span><small>${isActive?'Aktuell geöffnet':'Antippen zum Öffnen'}</small></div>
+      <span class="collection-arrow">›</span>
+    </button>`;
+  }).join('');
+  el.setsCatalog.innerHTML = specialCard + setCards;
+}
+async function openSetsDialog() {
+  if (!el.setsDialog.open) el.setsDialog.showModal();
+  const cached = readJSON('pokemon-set-catalog-v10', null);
+  if (!state.catalog.length && cached?.sets?.length) state.catalog = cached.sets;
+  renderSetsCatalog();
+  await loadSetsCatalog();
+}
+async function switchCollection(collection) {
+  if (!collection || collection.id === state.collection.id) { el.setsDialog.close(); return; }
+  state.collection = collection;
+  SETS = collection.sets.slice();
+  persistCollectionSelection();
+  state.cards = [];
+  state.sets = [];
+  state.search = '';
+  state.setFilter = 'all';
+  state.ownershipFilter = 'all';
+  state.marketOwnershipFilter = 'all';
+  el.searchInput.value = '';
+  el.setsDialog.close();
+  switchView('galleryView');
+  renderCollectionChrome();
+  updateOfflineStatus();
+  await loadData();
+}
+el.setsSearchInput?.addEventListener('input', renderSetsCatalog);
+el.setsCatalog?.addEventListener('click', event => {
+  const special = event.target.closest('[data-collection-special]');
+  if (special) { switchCollection(SPECIAL_COLLECTION); return; }
+  const button = event.target.closest('[data-collection-set]');
   if (!button) return;
-  document.querySelectorAll('.view').forEach(view => view.classList.toggle('active', view.id === button.dataset.view));
-  document.querySelectorAll('.bottom-nav button').forEach(item => item.classList.toggle('active', item === button));
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const brief = state.catalog.find(s => s.id === button.dataset.collectionSet);
+  if (brief) switchCollection(makeGenericCollection(brief));
 });
 
 el.exportButton.addEventListener('click', () => {
@@ -736,13 +904,13 @@ async function prepareOfflineAlbum() {
   el.offlineButton.disabled = true;
   const cache = await caches.open(OFFLINE_CACHE);
   const tasks = [];
-  SETS.forEach(set => tasks.push({ type: 'api', url: `${API_ROOT}/sets/${encodeURIComponent(set.id)}` }));
+  collectionSetSpecs().forEach(set => tasks.push({ type: 'api', url: `${API_ROOT}/sets/${encodeURIComponent(set.id)}` }));
   state.cards.forEach(card => {
     tasks.push({ type: 'api', url: `${API_ROOT}/cards/${encodeURIComponent(card.id)}` });
     const low = imageUrl(card.image, 'low');
     if (low) tasks.push({ type: 'image', url: low });
   });
-  EXTRA_CARDS.forEach(extra => extraImageSources(extra).slice(0,2).forEach(url => tasks.push({ type: 'image', url })));
+  activeExtras().forEach(extra => extraImageSources(extra).slice(0,2).forEach(url => tasks.push({ type: 'image', url })));
   let done = 0;
   let failed = 0;
   const update = () => {
@@ -756,7 +924,7 @@ async function prepareOfflineAlbum() {
     done++;
     update();
   }, 6);
-  localStorage.setItem('pokemon-offline-ready-v7', JSON.stringify({ savedAt: Date.now(), failed, total: tasks.length }));
+  localStorage.setItem(`pokemon-offline-ready-v10:${state.collection.id}`, JSON.stringify({ savedAt: Date.now(), failed, total: tasks.length }));
   el.offlineStatus.textContent = failed ? `Offline-Album gespeichert. ${failed} Dateien konnten nicht geladen werden; online werden sie später ergänzt.` : 'Offline bereit: Karten, Bilder und Beschreibungen sind auf diesem Gerät gespeichert.';
   el.offlineButton.textContent = 'Offline-Album aktualisieren';
   el.offlineButton.disabled = false;
@@ -764,7 +932,7 @@ async function prepareOfflineAlbum() {
 
 function updateOfflineStatus() {
   if (!el.offlineStatus) return;
-  const ready = readJSON('pokemon-offline-ready-v7', null);
+  const ready = readJSON(`pokemon-offline-ready-v10:${state.collection.id}`, null);
   if (ready) {
     const date = new Date(ready.savedAt);
     el.offlineStatus.textContent = `Offline-Album vorhanden · zuletzt gespeichert ${date.toLocaleDateString('de-DE')}.`;
@@ -781,7 +949,10 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
 }
 
 (async () => {
+  state.collection = restoreCollectionSelection();
+  SETS = state.collection.sets.slice();
   await initPersistentStorage();
+  renderCollectionChrome();
   updateOfflineStatus();
   await loadData();
   renderAll();

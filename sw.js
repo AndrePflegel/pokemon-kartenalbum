@@ -1,6 +1,6 @@
-const APP_CACHE = 'pokemon-kartenalbum-app-v7';
-const CONTENT_CACHE = 'pokemon-kartenalbum-content-v9';
-const APP_FILES = ['./','./index.html','./styles.css?v=7','./app.js?v=7','./manifest.webmanifest','./icon.svg','./apple-touch-icon.png','./icon-512.png'];
+const APP_CACHE = 'pokemon-kartenalbum-app-v10';
+const CONTENT_CACHE = 'pokemon-kartenalbum-content-v10';
+const APP_FILES = ['./','./index.html','./styles.css?v=10','./app.js?v=10','./manifest.webmanifest','./icon.svg','./apple-touch-icon.png','./icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(APP_CACHE).then(cache => cache.addAll(APP_FILES)).then(() => self.skipWaiting()));
