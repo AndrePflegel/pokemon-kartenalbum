@@ -115,3 +115,15 @@ Preis-Zuordnung korrigiert:
 - Innerhalb der erkannten Erweiterung werden Karten nach englischem Namen und bei Namensduplikaten deterministisch nach Kartennummer / Produkt-ID gepaart.
 - Der Workflow schreibt Diagnosewerte (`idExpansion`, Kartenanzahl, Namensüberlappung, zugeordnete Preise) in `pokemon-prices.json`.
 - Die App zeigt jetzt auch an, wie viele Preise lokal gespeichert wurden.
+
+
+## Version 15
+
+Cardmarket-Preis-Matching und Langzeitbetrieb:
+- Schwarze Blitze (`idExpansion 6134`) und Weiße Flammen (`idExpansion 6135`) werden als verifizierte Cardmarket-Erweiterungen verwendet.
+- Innerhalb dieser Erweiterungen entsprechen 172 bzw. 173 Cardmarket-Produkte exakt den 172 bzw. 173 nummerierten TCGdex-Karten.
+- Die Preiszuordnung erfolgt daher stabil nach Sammlernummer bzw. Produktreihenfolge; Namen dienen nur als Plausibilitätsanker.
+- Eine Qualitätsgrenze verhindert schlechte Preisdateien: unter 95 % Zuordnung oder bei veränderter Karten-/Produktanzahl bricht der Workflow ab und der bisherige gültige Preisstand bleibt erhalten.
+- Die automatische GitHub Action läuft nur noch einmal monatlich am 1. um 05:17 UTC.
+- `Run workflow` bleibt für manuelle Aktualisierungen verfügbar.
+- Auf dem iPhone wird weiterhin niemals automatisch ein Preisdownload gestartet.

@@ -38,14 +38,14 @@ const CARD_VARIANTS = [
 const STORAGE_KEY = 'pokemon-black-white-owned-v1';
 const DETAIL_CACHE_KEY = 'pokemon-black-white-detail-cache-v1';
 const LEGACY_ALBUM_CACHE_KEY = 'pokemon-black-white-album-cache-v9';
-const DB_NAME = 'pokemon-kartenalbum-v14';
+const DB_NAME = 'pokemon-kartenalbum-v15';
 const DB_VERSION = 1;
 const OWNED_STORE = 'owned';
-const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v14';
+const OFFLINE_CACHE = 'pokemon-kartenalbum-content-v15';
 const REQUEST_TIMEOUT_MS = 15000;
 const GALLERY_INITIAL_BATCH = 48;
 const GALLERY_NEXT_BATCH = 32;
-const PRICE_STORE_KEY = 'pokemon-cardmarket-prices-v14';
+const PRICE_STORE_KEY = 'pokemon-cardmarket-prices-v15';
 const PRICE_FEED_URL = './data/pokemon-prices.json';
 
 const state = {
